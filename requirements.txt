@@ -1,0 +1,10 @@
+# SHEM Multi-Agent System Requirements
+# Day 2: Perception and Environment Modeling
+
+# SPADE Framework for Multi-Agent Systems
+spade>=3.2.0
+
+# Additional dependencies (automatically installed with SPADE)
+# - aioxmpp: For XMPP protocol support
+# - aiosasl: For XMPP authentication
+# - multidict: For multi-valued dictionaries
