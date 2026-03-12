@@ -1,4 +1,4 @@
-"""Main entry point for the SHEM Day 6 evaluation run."""
+"""Main entry point for the SHEM Multi-Agent System."""
 
 import asyncio
 from core.environment import WeatherEnvironment
@@ -15,28 +15,31 @@ MANAGER_AGENT_JID = "home_manager@localhost"
 MANAGER_AGENT_PASSWORD = "manager123"
 
 
-
-async def run_stress_test():
+async def main():
 	"""
-	Run the finite Day 6 evaluation scenario and print summary metrics.
+	Bootstrap the SHEM MAS and run the open-ended simulation.
+
+	The system runs continuously until interrupted with Ctrl+C.
+	Use stress_test.py for the bounded Day 6 evaluation scenario.
 	"""
 	print("=" * 60)
 	print("SHEM - Smart Home Energy Manager")
-	print("Day 6: System Evaluation Stress Test")
+	print("Multi-Agent System")
 	print("=" * 60)
 	print()
 
 	evaluation_logger = EvaluationLogger(csv_path="evaluation_results.csv")
-    
+
 	# ═══════════════════════════════════════════════════════════════
 	# Step 1: Initialize the Stochastic Environment
 	# ═══════════════════════════════════════════════════════════════
 	print("[System] Initializing Weather Environment...")
-	weather_env = WeatherEnvironment(cloudy_probability=0.8, total_steps=25)
+	# Use stochastic behavior with no step limit for open-ended simulation
+	weather_env = WeatherEnvironment(cloudy_probability=0.2, total_steps=None)
 	print("[System] Weather Environment initialized")
-	print("[System] Stress profile: T=0-10 high sunlight | T=11-15 cloud stress | T=16-24 night")
+	print(f"[System] Cloudy probability: {weather_env.cloudy_probability * 100:.0f}%")
 	print()
-    
+
 	# ═══════════════════════════════════════════════════════════════
 	# Step 2: Create and Start the Agents
 	# ═══════════════════════════════════════════════════════════════
@@ -47,9 +50,9 @@ async def run_stress_test():
 		environment=weather_env,
 		manager_jid=MANAGER_AGENT_JID,
 		evaluation_logger=evaluation_logger,
-		verify_security=False  # Disable SSL verification for local testing
+		verify_security=False,
 	)
-    
+
 	print("[System] Starting Solar Agent...")
 	await solar_agent.start(auto_register=True)
 	print("[System] Solar Agent is now active")
@@ -60,36 +63,37 @@ async def run_stress_test():
 		password=MANAGER_AGENT_PASSWORD,
 		solar_jid=SOLAR_AGENT_JID,
 		evaluation_logger=evaluation_logger,
-		verify_security=False  # Disable SSL verification for local testing
+		verify_security=False,
 	)
 
 	print("[System] Starting Home Manager Agent...")
 	await manager_agent.start(auto_register=True)
 	print("[System] Home Manager Agent is now active")
 	print()
-    
+
 	print("=" * 60)
-	print("System is running the 25-step stress test.")
+	print("System is running. Press Ctrl+C to stop.")
 	print("=" * 60)
 	print()
-    
+
 	try:
-		while solar_agent.is_alive() and manager_agent.is_alive() and not weather_env.is_complete():
+		# ═══════════════════════════════════════════════════════════
+		# Step 3: Run indefinitely — let agents drive the loop
+		# ═══════════════════════════════════════════════════════════
+		while solar_agent.is_alive() and manager_agent.is_alive():
 			await asyncio.sleep(1)
 
-		if weather_env.is_complete() and solar_agent.is_alive() and manager_agent.is_alive():
-			print("[System] Stress scenario complete. Waiting for final manager reaction...")
-			await asyncio.sleep(5)
-            
 	except KeyboardInterrupt:
 		print("\n")
 		print("=" * 60)
 		print("[System] Shutdown signal received")
 		print("[System] Stopping Solar Agent...")
 		print("[System] Stopping Home Manager Agent...")
-        
+
 	finally:
-		# Ensure agents are properly stopped
+		# ═══════════════════════════════════════════════════════════
+		# Step 4: Graceful shutdown and session summary
+		# ═══════════════════════════════════════════════════════════
 		await solar_agent.stop()
 		await manager_agent.stop()
 		summary = evaluation_logger.build_summary()
@@ -106,6 +110,6 @@ async def run_stress_test():
 
 if __name__ == "__main__":
 	try:
-		asyncio.run(run_stress_test())
+		asyncio.run(main())
 	except KeyboardInterrupt:
 		print("\n[System] Exiting...")

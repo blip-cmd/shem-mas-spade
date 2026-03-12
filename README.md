@@ -1,138 +1,160 @@
-# shem-mas-spade
-Smart Home Energy Manager - Multi-Agent System. A BDI-style intelligent multi-agent system built with SPADE to optimize home energy self-sufficiency using stochastic environmental modeling.
+# SHEM MAS
 
-## Day 4: FIPA-ACL Inter-Agent Communication
+Smart Home Energy Manager for DCIT 403. This repository implements a small multi-agent system in SPADE where a solar sensing agent and a home manager agent coordinate around renewable energy availability, battery charging, and stress-test evaluation.
 
-This implementation focuses on:
-- **FIPA-ACL Messaging**: SolarAgent sends `INFORM` performative messages to the HomeManagerAgent
-- **Message Templates**: HomeManagerAgent filters its mailbox with a SPADE `Template` to accept only `INFORM` messages
-- **Belief Update**: Manager's FSM reads real messages instead of random simulation to update its internal solar status belief
-- **Full Communication Loop**: Both agents are JID-aware and exchange structured XMPP messages each sensing cycle
+## Project Summary
 
-### Project Structure
+The project models a smart home as a distributed intelligent system:
 
-```
+- The SolarAgent senses weather-dependent generation and sends symbolic updates.
+- The HomeManagerAgent maintains internal battery beliefs and reacts through an FSM.
+- The WeatherEnvironment provides both normal solar conditions and a Day 6 stress scenario.
+- The evaluation pipeline writes runtime metrics to evaluation_results.csv and prints a final summary at shutdown.
+
+## Project Structure
+
+```text
 shem-mas-spade/
-├── core/
-│   └── environment.py      # Stochastic weather environment
 ├── agents/
-│   ├── solar_agent.py      # Simple reflex agent — senses & sends INFORM messages
-│   └── manager_agent.py    # Model-based FSM agent — receives messages & updates beliefs
-├── main.py                 # System entry point (wires agent JIDs)
-├── requirements.txt        # Python dependencies
-└── README.md               # This file
+│   ├── __init__.py
+│   ├── manager_agent.py
+│   └── solar_agent.py
+├── core/
+│   ├── __init__.py
+│   ├── environment.py
+│   └── logger.py
+├── main.py
+├── plots.py
+├── requirements.txt
+├── stress_test.py
+└── README.md
 ```
 
-### Features
+## Theory Applied
 
-#### WeatherEnvironment (core/environment.py)
-- Stochastic weather simulation with 20% cloudy probability
-- Cloudy conditions: 50W–150W output
-- Clear conditions: 800W–1200W output
-- Implements realistic environmental uncertainty
+This project aligns its implementation with the course labs as follows.
 
-#### SolarAgent (agents/solar_agent.py)
-- Simple Reflex Agent architecture
-- Periodic sensing every 3 seconds
-- Status classification: `"LOW"` (<300W) or `"OPTIMAL"` (≥300W)
-- **Day 4**: Composes a FIPA-ACL `Message` with `performative=inform` and `body=status`, then `await self.send(msg)` to the Manager's JID
+| Course Lab | Theory Applied in This Repo | Concrete Implementation |
+| --- | --- | --- |
+| Lab 2: Perception and Environment Modeling | Agents reason over an external environment instead of fixed inputs. | WeatherEnvironment models solar conditions and exposes percepts as wattage, weather, and phase. |
+| Lab 3: Reactive Agent Behavior | Condition-action rules drive immediate response to percepts. | SolarAgent classifies each reading as LOW or OPTIMAL and acts without long-horizon planning. |
+| Lab 3: Reactive Control with FSM | Reactive behavior can also be structured as explicit states. | HomeManagerAgent uses an FSM with IDLE, CHARGING, SYSTEM_CHECK, and EMERGENCY states. |
+| Lab 4: Agent Communication | Agents exchange structured symbolic messages rather than shared variables. | SolarAgent sends FIPA-ACL INFORM messages and HomeManagerAgent filters them with a SPADE Template. |
+| Lab 12: System Evaluation | Multi-agent systems should be evaluated under stress with measurable metrics. | Day/Night stress logic, CSV logging, grid-energy estimate, safety violation counting, and reaction-time measurement. |
+| Lab 13: Packaging and Documentation | A finished MAS should be runnable, documented, and ready for demonstration. | Final README, dependency list, stress-test entry point, and optional plotting script. |
 
-#### HomeManagerAgent (agents/manager_agent.py)
-- Model-Based Agent with a 3-state FSM: `IDLE → CHARGING ↔ EMERGENCY`
-- Tracks `battery_level` as its internal world model
-- **Day 4**: Registers the FSM with an `inform` `Template`; `IdleState` and `EmergencyState` call `await self.receive(timeout=5)` — if a message arrives its `body` updates the agent's `solar_status` belief, replacing all `random.choice` simulation
+## Core Features
 
-### Communication Protocol
+### SolarAgent
 
+- Implements a simple reflex agent.
+- Senses the environment every cycle and converts wattage into LOW or OPTIMAL.
+- Sends FIPA-ACL INFORM messages to the manager with extra evaluation metadata.
+
+### HomeManagerAgent
+
+- Implements a model-based controller with a finite-state machine.
+- Tracks battery level, solar status, and battery health as internal beliefs.
+- Logs every state transition together with current battery level and reaction time.
+
+### WeatherEnvironment
+
+- Supports normal probabilistic weather behavior through its cloudy probability parameter.
+- Implements the Day 6 evaluation profile:
+  - T=0-10: high sunlight
+  - T=11-15: cloud stress with 80% cloud probability
+  - T=16-24: zero sunlight
+
+### Evaluation Pipeline
+
+- Writes structured runtime results to evaluation_results.csv.
+- Tracks three summary metrics:
+  - Total Grid Energy Saved
+  - Battery Safety Violations
+  - Average Reaction Time
+
+## How To Run
+
+### 1. Create and activate a virtual environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 ```
-SolarAgent                          HomeManagerAgent
-    |                                       |
-    |  sense wattage → classify status      |
-    |  build Message(to=manager_jid)        |
-    |  metadata: performative = "inform"    |
-    |  body: "OPTIMAL" | "LOW"             |
-    | ------- XMPP INFORM ---------------→ |
-    |                                       |  receive(timeout=5)
-    |                                       |  update solar_status belief
-    |                                       |  FSM transition (IDLE/CHARGING/EMERGENCY)
-```
 
-### Setup Instructions
-
-#### Prerequisites
-1. **Python 3.8 or higher**
-2. **XMPP Server** (for local testing):
-   - Install Prosody: `sudo apt-get install prosody` (Linux)
-   - Or use a public XMPP server
-
-#### Installing Dependencies
+### 2. Install Python dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-#### Setting up Local XMPP Server (Prosody)
+### 3. Set up an XMPP server
+
+SPADE requires an XMPP server. A local Prosody setup is the simplest option.
 
 ```bash
-# Install Prosody
 sudo apt-get install prosody
-
-# Register both agent accounts
-sudo prosodyctl adduser solar_sensor@localhost   # password: sensor123
-sudo prosodyctl adduser home_manager@localhost   # password: manager123
-
-# Start Prosody
+sudo prosodyctl adduser solar_sensor@localhost
+sudo prosodyctl adduser home_manager@localhost
 sudo systemctl start prosody
 ```
 
-### Running the System
+Use these passwords when prompted:
+
+- solar_sensor@localhost: sensor123
+- home_manager@localhost: manager123
+
+### 4. Run the main MAS simulation
 
 ```bash
 python main.py
 ```
 
-Expected output:
-```
-============================================================
-SHEM - Smart Home Energy Manager
-Day 4: FIPA-ACL Communication
-============================================================
+### 5. Run the Day 6 stress test directly
 
-[System] Initializing Weather Environment...
-[SolarAgent] Agent solar_sensor@localhost starting up...
-[HomeManagerAgent] Agent home_manager@localhost starting up...
-[HomeManagerAgent] FSM behavior registered (listening for INFORM messages)
-
-[Sense #1] Solar Agent Perception:
-  Weather: Clear
-  Wattage: 1045.32W
-  Status:  OPTIMAL
-  [SolarAgent] >> INFORM sent to home_manager@localhost: 'OPTIMAL'
---------------------------------------------------
-  [HomeManagerAgent] << INFORM received from solar_sensor@localhost: 'OPTIMAL'
-[HomeManagerAgent] State=IDLE | Battery=48% | Solar=OPTIMAL | Intention=Monitor environment and preserve energy
+```bash
+python stress_test.py
 ```
 
-Press `Ctrl+C` to stop the system gracefully.
+At the end of the run, the system prints:
 
-### Architecture Notes
+- Total Grid Energy Saved: X units
+- Battery Safety Violations: X times
+- Average Reaction Time: X ms
 
-**Prometheus Methodology Alignment:**
-- **Environment**: Stochastic model representing real-world uncertainty
-- **SolarAgent Type**: Simple Reflex Agent (condition-action rules) + message sender
-- **ManagerAgent Type**: Model-Based Agent (maintains belief state) + FSM controller
-- **Communication**: FIPA-ACL `INFORM` performative over XMPP
+It also writes detailed step-by-step data to evaluation_results.csv.
 
-**Agent Interaction Cycle:**
-1. **SENSE**: SolarAgent samples the WeatherEnvironment for wattage
-2. **THINK**: Classifies wattage — `IF wattage < 300 THEN "LOW" ELSE "OPTIMAL"`
-3. **COMMUNICATE**: Sends a FIPA-ACL `INFORM` message to the HomeManagerAgent
-4. **RECEIVE**: HomeManagerAgent's FSM state calls `receive(timeout=5)` to collect the message
-5. **BELIEVE**: Manager updates its `solar_status` belief from `msg.body`
-6. **TRANSITION**: FSM selects the next state (`IDLE`, `CHARGING`, or `EMERGENCY`) based on real data
+### 6. Generate the optional battery plot
 
-### Next Steps (Day 5+)
-- Add `REQUEST` / `AGREE` / `REFUSE` performatives for grid negotiation
-- Introduce a GridAgent and appliance load-shedding logic
-- Implement full BDI (Belief-Desire-Intention) reasoning cycle
-- Persist battery state and energy logs to a time-series store
+After a stress test has produced evaluation_results.csv, run:
+
+```bash
+python plots.py
+```
+
+This generates battery_level_over_time.png in the project root.
+
+## Key Findings
+
+The repository currently does not include a committed Day 6 evaluation_results.csv file, so the points below are grounded in the implemented evaluation pipeline and a deterministic smoke validation of that pipeline.
+
+- The Day/Night stress profile correctly separates high-generation, cloud-stress, and zero-solar phases across 25 timesteps.
+- The evaluation logger produces full CSV coverage for both sensing events and manager state transitions, which makes the final metrics auditable after each run.
+- In smoke validation of the logging flow, the evaluation path recorded a safety-threshold breach when battery level dropped below the configured limit, confirming that Battery Safety Violations are counted at the root condition rather than inferred later.
+- Reaction time measurement is captured at message handoff time using per-message timestamps, so communication responsiveness can be compared across future runs.
+
+For the final report submission, rerun stress_test.py against a working local XMPP server and replace this section with the exact values printed at shutdown.
+
+## Expected Outputs
+
+Successful Day 6 execution should produce:
+
+- evaluation_results.csv
+- Console summary of grid savings, safety violations, and reaction time
+- Optional battery_level_over_time.png when plots.py is used
+
+## Notes
+
+- JIDs and passwords are currently hardcoded for local coursework testing.
+- The project assumes localhost XMPP connectivity unless the credentials in main.py are changed.
+- The plotting script is intentionally lightweight and only depends on the CSV output from Day 6.

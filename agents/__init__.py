@@ -1,9 +1,6 @@
-"""
-Agents module for SHEM Multi-Agent System.
+"""Agent implementations exposed by the SHEM package."""
 
-Contains all agent implementations following the SPADE framework.
-"""
-
+from .manager_agent import HomeManagerAgent
 from .solar_agent import SolarAgent
 
-__all__ = ['SolarAgent']
+__all__ = ["HomeManagerAgent", "SolarAgent"]

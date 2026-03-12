@@ -18,7 +18,8 @@ class WeatherEnvironment:
 
 		Args:
 			cloudy_probability (float): Probability of cloudy conditions (0.0 to 1.0)
-			total_steps (int): Total number of sensing steps in the stress test
+			total_steps (int | None): Total number of sensing steps in the stress test.
+				Set to None for open-ended simulation.
 		"""
 		self.cloudy_probability = cloudy_probability
 		self.total_steps = total_steps
@@ -28,6 +29,7 @@ class WeatherEnvironment:
 		self.current_phase = "BOOT"
 
 	def _resolve_phase(self, timestep):
+		"""Map a timestep to the configured evaluation phase."""
 		if timestep <= self.HIGH_SUNLIGHT_END:
 			return "HIGH_SUNLIGHT"
 		if timestep <= self.STRESS_END:
@@ -36,8 +38,10 @@ class WeatherEnvironment:
 
 	def is_complete(self):
 		"""Return True when the scripted stress test has consumed all steps."""
+		if self.total_steps is None:
+			return False
 		return self.current_timestep >= self.total_steps - 1
-        
+
 	def update_weather(self):
 		"""
 		Advance the scripted stress test by one timestep.
@@ -67,7 +71,7 @@ class WeatherEnvironment:
 			self.current_wattage = 0.0
 
 		return self.get_current_state()
-    
+
 	def get_current_state(self):
 		"""
 		Get the current state of the environment without advancing time.

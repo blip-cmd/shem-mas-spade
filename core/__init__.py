@@ -1,9 +1,6 @@
-"""
-Core module for SHEM Multi-Agent System.
-
-Contains environment simulation and world modeling components.
-"""
+"""Core environment and evaluation helpers for the SHEM package."""
 
 from .environment import WeatherEnvironment
+from .logger import EvaluationLogger
 
-__all__ = ['WeatherEnvironment']
+__all__ = ["EvaluationLogger", "WeatherEnvironment"]
