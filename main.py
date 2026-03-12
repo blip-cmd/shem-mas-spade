@@ -39,7 +39,7 @@ async def main():
 	"""
 	print("=" * 60)
 	print("SHEM - Smart Home Energy Manager")
-	print("Day 3: Reactive Behavior with Model-Based Agent")
+	print("Day 4: FIPA-ACL Communication")
 	print("=" * 60)
 	print()
     
@@ -61,6 +61,7 @@ async def main():
 		jid=SOLAR_AGENT_JID,
 		password=SOLAR_AGENT_PASSWORD,
 		environment=weather_env,
+		manager_jid=MANAGER_AGENT_JID,
 		verify_security=False  # Disable SSL verification for local testing
 	)
     
@@ -72,6 +73,7 @@ async def main():
 	manager_agent = HomeManagerAgent(
 		jid=MANAGER_AGENT_JID,
 		password=MANAGER_AGENT_PASSWORD,
+		solar_jid=SOLAR_AGENT_JID,
 		verify_security=False  # Disable SSL verification for local testing
 	)
 

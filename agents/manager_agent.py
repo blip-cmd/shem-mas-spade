@@ -5,11 +5,11 @@ This module implements a Model-Based Agent using a Finite State Machine (FSM)
 to maintain internal state (battery level) and react to changing conditions.
 """
 
-import random
 import asyncio
 
 from spade.agent import Agent
 from spade.behaviour import FSMBehaviour, State
+from spade.template import Template
 
 
 class HomeManagerAgent(Agent):
@@ -25,9 +25,12 @@ class HomeManagerAgent(Agent):
 	CHARGING = "CHARGING"
 	EMERGENCY = "EMERGENCY"
 
-	def __init__(self, jid, password, verify_security=False):
+	def __init__(self, jid, password, solar_jid, verify_security=False):
 		super().__init__(jid, password, verify_security=verify_security)
+		self.solar_jid = solar_jid
 		self.battery_level = 50
+		# Belief: last known solar status received from SolarAgent
+		self.solar_status = "LOW"
 
 	async def setup(self):
 		print(f"[HomeManagerAgent] Agent {self.jid} starting up...")
@@ -48,8 +51,13 @@ class HomeManagerAgent(Agent):
 		fsm.add_transition(source=self.EMERGENCY, dest=self.CHARGING)
 		fsm.add_transition(source=self.EMERGENCY, dest=self.IDLE)
 
-		self.add_behaviour(fsm)
-		print("[HomeManagerAgent] FSM behavior registered")
+		# Register the FSM with a Template so only FIPA-ACL INFORM messages
+		# from the SolarAgent are routed into this behaviour's mailbox.
+		inform_template = Template()
+		inform_template.set_metadata("performative", "inform")
+
+		self.add_behaviour(fsm, inform_template)
+		print("[HomeManagerAgent] FSM behavior registered (listening for INFORM messages)")
 
 	class BatteryFSM(FSMBehaviour):
 		async def on_start(self):
@@ -57,10 +65,13 @@ class HomeManagerAgent(Agent):
 
 	class IdleState(State):
 		async def run(self):
-			await asyncio.sleep(3)
+			# Wait up to 5 seconds for a real FIPA-ACL INFORM from the SolarAgent.
+			msg = await self.receive(timeout=5)
+			if msg:
+				self.agent.solar_status = msg.body
+				print(f"  [HomeManagerAgent] << INFORM received from {msg.sender}: '{msg.body}'")
 
-			# Day 3 placeholder for Day 4 messaging: simulate solar status percept.
-			solar_status = random.choice(["OPTIMAL", "LOW"])
+			solar_status = self.agent.solar_status
 
 			# In IDLE the battery slowly discharges due to household baseline usage.
 			self.agent.battery_level = max(0, self.agent.battery_level - 2)
@@ -100,12 +111,17 @@ class HomeManagerAgent(Agent):
 
 	class EmergencyState(State):
 		async def run(self):
-			await asyncio.sleep(3)
+			# Wait up to 5 seconds for an updated INFORM; retain last belief if none arrives.
+			msg = await self.receive(timeout=5)
+			if msg:
+				self.agent.solar_status = msg.body
+				print(f"  [HomeManagerAgent] << INFORM received from {msg.sender}: '{msg.body}'")
+
+			solar_status = self.agent.solar_status
 
 			# Emergency mode still consumes a small amount of energy.
 			self.agent.battery_level = max(0, self.agent.battery_level - 1)
 
-			solar_status = random.choice(["OPTIMAL", "LOW"])
 			intention = "Preserve critical battery and restore safe level"
 			print(
 				f"[HomeManagerAgent] State=EMERGENCY | Battery={self.agent.battery_level}% "
