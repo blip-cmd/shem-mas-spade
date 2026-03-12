@@ -1,10 +1,6 @@
-"""
-Solar Agent Module for SHEM Multi-Agent System
+"""Solar agent module for the SHEM Multi-Agent System."""
 
-This module implements a Simple Reflex Agent that senses the environment
-and reacts to solar energy conditions. It follows the agent architecture
-principles from the Prometheus methodology.
-"""
+import time
 
 from spade.agent import Agent
 from spade.behaviour import PeriodicBehaviour
@@ -27,7 +23,15 @@ class SolarAgent(Agent):
 		environment: Reference to the WeatherEnvironment to sense
 	"""
     
-	def __init__(self, jid, password, environment, manager_jid, verify_security=False):
+	def __init__(
+		self,
+		jid,
+		password,
+		environment,
+		manager_jid,
+		evaluation_logger,
+		verify_security=False,
+	):
 		"""
 		Initialize the Solar Agent.
         
@@ -41,6 +45,7 @@ class SolarAgent(Agent):
 		super().__init__(jid, password, verify_security=verify_security)
 		self.environment = environment
 		self.manager_jid = manager_jid
+		self.evaluation_logger = evaluation_logger
         
 	async def setup(self):
 		"""
@@ -55,6 +60,7 @@ class SolarAgent(Agent):
 			period=3,
 			environment=self.environment,
 			manager_jid=self.manager_jid,
+			evaluation_logger=self.evaluation_logger,
 		)
 		self.add_behaviour(sense_behaviour)
         
@@ -74,7 +80,7 @@ class SolarAgent(Agent):
 			environment: Reference to the WeatherEnvironment
 		"""
         
-		def __init__(self, period, environment, manager_jid):
+		def __init__(self, period, environment, manager_jid, evaluation_logger):
 			"""
 			Initialize the sensing behaviour.
             
@@ -86,6 +92,7 @@ class SolarAgent(Agent):
 			super().__init__(period=period)
 			self.environment = environment
 			self.manager_jid = manager_jid
+			self.evaluation_logger = evaluation_logger
 			self.sense_count = 0
             
 		async def run(self):
@@ -101,9 +108,15 @@ class SolarAgent(Agent):
 			# ═══════════════════════════════════════════════════════
 			# SENSE: Perceive the environment
 			# ═══════════════════════════════════════════════════════
-			# Sample the stochastic environment to get current conditions
-			wattage, is_cloudy = self.environment.update_weather()
-			weather_status = "Cloudy" if is_cloudy else "Clear"
+			if self.environment.is_complete():
+				self.kill(exit_code=0)
+				return
+
+			environment_state = self.environment.update_weather()
+			wattage = environment_state["wattage"]
+			weather_status = environment_state["weather"]
+			timestep = environment_state["timestep"]
+			phase = environment_state["phase"]
             
 			# ═══════════════════════════════════════════════════════
 			# THINK: Evaluate percepts and apply condition-action rules
@@ -115,6 +128,14 @@ class SolarAgent(Agent):
 				status = "LOW"
 			else:
 				status = "OPTIMAL"
+
+			self.evaluation_logger.log_solar_cycle(
+				timestep=timestep,
+				phase=phase,
+				weather=weather_status,
+				wattage=wattage,
+				solar_status=status,
+			)
             
 			# ═══════════════════════════════════════════════════════
 			# ACT: Log status and send FIPA-ACL INFORM to Manager
@@ -128,6 +149,11 @@ class SolarAgent(Agent):
 			msg = Message(to=str(self.manager_jid))
 			msg.sender = str(self.agent.jid)
 			msg.set_metadata("performative", "inform")
+			msg.set_metadata("timestep", str(timestep))
+			msg.set_metadata("phase", phase)
+			msg.set_metadata("weather", weather_status)
+			msg.set_metadata("wattage", f"{wattage:.2f}")
+			msg.set_metadata("sent_at", f"{time.perf_counter():.9f}")
 			msg.body = status
 			await self.send(msg)
 			print(f"  [SolarAgent] >> INFORM sent to {self.manager_jid}: '{status}'")

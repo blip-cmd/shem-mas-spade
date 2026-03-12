@@ -1,19 +1,8 @@
-"""
-SHEM (Smart Home Energy Manager) Multi-Agent System
-Main Entry Point
-
-This is Day 3 of the SHEM project following the Prometheus methodology.
-Focus: Lab 3 - Reactive Behavior
-
-This module bootstraps the system by:
-1. Creating a stochastic environment (WeatherEnvironment)
-2. Spawning a Simple Reflex Agent (SolarAgent)
-3. Spawning a Model-Based Agent (HomeManagerAgent)
-4. Managing the agent lifecycle with graceful shutdown
-"""
+"""Main entry point for the SHEM Day 6 evaluation run."""
 
 import asyncio
 from core.environment import WeatherEnvironment
+from core.logger import EvaluationLogger
 from agents.solar_agent import SolarAgent
 from agents.manager_agent import HomeManagerAgent
 
@@ -26,31 +15,26 @@ MANAGER_AGENT_JID = "home_manager@localhost"
 MANAGER_AGENT_PASSWORD = "manager123"
 
 
-async def main():
+
+async def run_stress_test():
 	"""
-	Main entry point for the SHEM Multi-Agent System.
-    
-	Implements the system bootstrap process:
-	1. Initialize the stochastic environment
-	2. Create and start the Solar Agent
-	3. Create and start the Home Manager Agent
-	4. Run the simulation
-	5. Handle graceful shutdown on interruption
+	Run the finite Day 6 evaluation scenario and print summary metrics.
 	"""
 	print("=" * 60)
 	print("SHEM - Smart Home Energy Manager")
-	print("Day 4: FIPA-ACL Communication")
+	print("Day 6: System Evaluation Stress Test")
 	print("=" * 60)
 	print()
+
+	evaluation_logger = EvaluationLogger(csv_path="evaluation_results.csv")
     
 	# ═══════════════════════════════════════════════════════════════
 	# Step 1: Initialize the Stochastic Environment
 	# ═══════════════════════════════════════════════════════════════
 	print("[System] Initializing Weather Environment...")
-	# Create environment with 20% probability of cloudy conditions
-	weather_env = WeatherEnvironment(cloudy_probability=0.2)
+	weather_env = WeatherEnvironment(cloudy_probability=0.8, total_steps=25)
 	print("[System] Weather Environment initialized")
-	print(f"[System] Cloudy probability: {weather_env.cloudy_probability * 100}%")
+	print("[System] Stress profile: T=0-10 high sunlight | T=11-15 cloud stress | T=16-24 night")
 	print()
     
 	# ═══════════════════════════════════════════════════════════════
@@ -62,6 +46,7 @@ async def main():
 		password=SOLAR_AGENT_PASSWORD,
 		environment=weather_env,
 		manager_jid=MANAGER_AGENT_JID,
+		evaluation_logger=evaluation_logger,
 		verify_security=False  # Disable SSL verification for local testing
 	)
     
@@ -74,6 +59,7 @@ async def main():
 		jid=MANAGER_AGENT_JID,
 		password=MANAGER_AGENT_PASSWORD,
 		solar_jid=SOLAR_AGENT_JID,
+		evaluation_logger=evaluation_logger,
 		verify_security=False  # Disable SSL verification for local testing
 	)
 
@@ -83,22 +69,19 @@ async def main():
 	print()
     
 	print("=" * 60)
-	print("System is running. Press Ctrl+C to stop.")
+	print("System is running the 25-step stress test.")
 	print("=" * 60)
 	print()
     
 	try:
-		# ═══════════════════════════════════════════════════════════
-		# Step 3: Run the simulation
-		# ═══════════════════════════════════════════════════════════
-		# Keep the system running and let the agent's periodic behavior execute
-		while solar_agent.is_alive() and manager_agent.is_alive():
+		while solar_agent.is_alive() and manager_agent.is_alive() and not weather_env.is_complete():
 			await asyncio.sleep(1)
+
+		if weather_env.is_complete() and solar_agent.is_alive() and manager_agent.is_alive():
+			print("[System] Stress scenario complete. Waiting for final manager reaction...")
+			await asyncio.sleep(5)
             
 	except KeyboardInterrupt:
-		# ═══════════════════════════════════════════════════════════
-		# Step 4: Graceful Shutdown Handler
-		# ═══════════════════════════════════════════════════════════
 		print("\n")
 		print("=" * 60)
 		print("[System] Shutdown signal received")
@@ -109,22 +92,20 @@ async def main():
 		# Ensure agents are properly stopped
 		await solar_agent.stop()
 		await manager_agent.stop()
+		summary = evaluation_logger.build_summary()
 		print("[System] Solar Agent stopped")
 		print("[System] Home Manager Agent stopped")
+		print()
+		print(f"Total Grid Energy Saved: {summary['total_grid_energy_saved']:.2f} units")
+		print(f"Battery Safety Violations: {int(summary['battery_safety_violations'])} times")
+		print(f"Average Reaction Time: {summary['average_reaction_time_ms']:.2f} ms")
+		print("[System] Detailed results written to evaluation_results.csv")
 		print("[System] SHEM system shutdown complete")
 		print("=" * 60)
 
 
 if __name__ == "__main__":
-	"""
-	Entry point when running the script directly.
-    
-	Uses asyncio to run the async main function, which is required
-	for SPADE agents that use async/await patterns.
-	"""
 	try:
-		# Run the async main function
-		asyncio.run(main())
+		asyncio.run(run_stress_test())
 	except KeyboardInterrupt:
-		# Handle interrupt at the top level
 		print("\n[System] Exiting...")
