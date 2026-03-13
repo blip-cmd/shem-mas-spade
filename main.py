@@ -1,18 +1,40 @@
 """Main entry point for the SHEM Multi-Agent System."""
 
 import asyncio
+import os
+from pathlib import Path
 from core.environment import WeatherEnvironment
 from core.logger import EvaluationLogger
 from agents.solar_agent import SolarAgent
 from agents.manager_agent import HomeManagerAgent
 
 
+def load_env_file(env_path):
+	if not env_path.exists():
+		return
+
+	for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+		line = raw_line.strip()
+		if not line or line.startswith("#") or "=" not in line:
+			continue
+
+		key, value = line.split("=", 1)
+		key = key.strip()
+		value = value.strip().strip('"').strip("'")
+		if key and key not in os.environ:
+			os.environ[key] = value
+
+
+load_env_file(Path(__file__).resolve().parent / ".env")
+
+
 # XMPP Configuration for SPADE
 # Note: For local testing, ensure an XMPP server is running (e.g., prosody, ejabberd)
-SOLAR_AGENT_JID = "solar_sensor@localhost"
-SOLAR_AGENT_PASSWORD = "sensor123"
-MANAGER_AGENT_JID = "home_manager@localhost"
-MANAGER_AGENT_PASSWORD = "manager123"
+XMPP_DOMAIN = os.getenv("XMPP_DOMAIN", "localhost")
+SOLAR_AGENT_JID = os.getenv("SOLAR_AGENT_JID", f"solar_sensor@{XMPP_DOMAIN}")
+SOLAR_AGENT_PASSWORD = os.getenv("SOLAR_AGENT_PASSWORD", "sensor123")
+MANAGER_AGENT_JID = os.getenv("MANAGER_AGENT_JID", f"home_manager@{XMPP_DOMAIN}")
+MANAGER_AGENT_PASSWORD = os.getenv("MANAGER_AGENT_PASSWORD", "manager123")
 
 
 async def main():

@@ -96,13 +96,26 @@ SPADE requires an XMPP server. A local Prosody setup is the simplest option.
 sudo apt-get install prosody
 sudo prosodyctl adduser solar_sensor@localhost
 sudo prosodyctl adduser home_manager@localhost
-sudo systemctl start prosody
+sudo service prosody start
+sudo service prosody status
 ```
+
+If you are running inside a non-privileged dev container, `service prosody start` may fail with permission errors (for example: cannot create `/run/prosody` or cannot set gid). In that case, run Prosody outside the container (host OS or VM), then point the agent JIDs in `main.py` to that reachable XMPP domain/host.
 
 Use these passwords when prompted:
 
 - solar_sensor@localhost: sensor123
 - home_manager@localhost: manager123
+
+If your XMPP server is not `localhost`, set environment variables before running the app:
+
+```bash
+export XMPP_DOMAIN=your-xmpp-hostname
+export SOLAR_AGENT_JID=solar_sensor@your-xmpp-hostname
+export MANAGER_AGENT_JID=home_manager@your-xmpp-hostname
+export SOLAR_AGENT_PASSWORD=sensor123
+export MANAGER_AGENT_PASSWORD=manager123
+```
 
 ### 4. Run the main MAS simulation
 
