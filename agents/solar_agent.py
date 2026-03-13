@@ -6,6 +6,11 @@ from spade.agent import Agent
 from spade.behaviour import PeriodicBehaviour
 from spade.message import Message
 
+try:
+	import spade.df as spade_df
+except ImportError:
+	spade_df = None
+
 
 class SolarAgent(Agent):
 	"""
@@ -54,6 +59,25 @@ class SolarAgent(Agent):
 		Registers the PeriodicBehaviour for continuous sensing.
 		"""
 		print(f"[SolarAgent] Agent {self.jid} starting up...")
+
+		if spade_df is not None:
+			try:
+				dfd = spade_df.Description()
+				dfd.services.append(
+					spade_df.Service(
+						name="Weather Service",
+						service_type="weather-monitoring",
+					)
+				)
+				if hasattr(self, "client") and hasattr(self.client, "register"):
+					await self.client.register(dfd)
+					print("[SolarAgent] Registered 'Weather Service' with the Directory Facilitator.")
+				else:
+					print("[SolarAgent] DF registration API unavailable on this SPADE version.")
+			except Exception as error:
+				print(f"[SolarAgent] DF registration failed: {error}")
+		else:
+			print("[SolarAgent] spade.df unavailable; skipping DF registration.")
         
 		# Register the periodic sensing behavior (every 3 seconds)
 		sense_behaviour = self.SenseSunlight(
@@ -149,6 +173,7 @@ class SolarAgent(Agent):
 			msg = Message(to=str(self.manager_jid))
 			msg.sender = str(self.agent.jid)
 			msg.set_metadata("performative", "inform")
+			msg.set_metadata("ontology", "weather-monitoring")
 			msg.set_metadata("timestep", str(timestep))
 			msg.set_metadata("phase", phase)
 			msg.set_metadata("weather", weather_status)
