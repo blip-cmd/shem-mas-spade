@@ -59,6 +59,7 @@ class FailureAwareState(State):
 		return False
 
 	def transition(self, current_state, next_state, reaction_time_ms=None):
+		"""Record a transition row and move the FSM to the next state."""
 		if reaction_time_ms is None:
 			reaction_time_ms = self.agent.consume_reaction_time()
 
@@ -198,6 +199,7 @@ class HomeManagerAgent(Agent):
 	EMERGENCY = "EMERGENCY"
 
 	def __init__(self, jid, password, solar_jid, evaluation_logger, verify_security=False):
+		"""Initialize beliefs, runtime metrics, and logger hooks for evaluation."""
 		super().__init__(jid, password, verify_security=verify_security)
 		self.solar_jid = solar_jid
 		self.evaluation_logger = evaluation_logger
@@ -212,6 +214,7 @@ class HomeManagerAgent(Agent):
 		self.last_reaction_time_ms = None
 
 	def update_beliefs_from_message(self, msg):
+		"""Update internal beliefs from a weather-monitoring INFORM message."""
 		self.current_solar_belief = msg.body
 		self.solar_status = msg.body
 		self.current_timestep = int(msg.get_metadata("timestep") or self.current_timestep)
@@ -220,12 +223,14 @@ class HomeManagerAgent(Agent):
 		self.current_wattage = float(msg.get_metadata("wattage") or self.current_wattage)
 
 	def reaction_time_ms(self, msg):
+		"""Compute transport delay from sender metadata timestamp to now."""
 		sent_at = msg.get_metadata("sent_at")
 		if sent_at is None:
 			return None
 		return (time.perf_counter() - float(sent_at)) * 1000
 
 	def consume_reaction_time(self):
+		"""Consume and clear the latest measured reaction time for one transition."""
 		reaction_time_ms = self.last_reaction_time_ms
 		self.last_reaction_time_ms = None
 		return reaction_time_ms

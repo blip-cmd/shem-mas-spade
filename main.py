@@ -2,14 +2,37 @@
 
 import asyncio
 import os
+import sys
 from pathlib import Path
+from contextlib import redirect_stdout, redirect_stderr
 from core.environment import WeatherEnvironment
 from core.logger import EvaluationLogger
 from agents.solar_agent import SolarAgent
 from agents.manager_agent import HomeManagerAgent
 
 
+class TeeStream:
+	"""Mirror writes to both terminal and log file."""
+
+	def __init__(self, primary_stream, secondary_stream):
+		self.primary_stream = primary_stream
+		self.secondary_stream = secondary_stream
+
+	def write(self, data):
+		self.primary_stream.write(data)
+		self.secondary_stream.write(data)
+		return len(data)
+
+	def flush(self):
+		self.primary_stream.flush()
+		self.secondary_stream.flush()
+
+	def isatty(self):
+		return self.primary_stream.isatty()
+
+
 def load_env_file(env_path):
+	"""Load KEY=VALUE pairs from .env into process environment if unset."""
 	if not env_path.exists():
 		return
 
@@ -42,7 +65,7 @@ async def main():
 	Bootstrap the SHEM MAS and run the open-ended simulation.
 
 	The system runs continuously until interrupted with Ctrl+C.
-	Use stress_test.py for the bounded Day 6 evaluation scenario.
+	Use stress_test.py for the bounded evaluation scenario.
 	"""
 	print("=" * 60)
 	print("SHEM - Smart Home Energy Manager")
@@ -131,7 +154,12 @@ async def main():
 
 
 if __name__ == "__main__":
-	try:
-		asyncio.run(main())
-	except KeyboardInterrupt:
-		print("\n[System] Exiting...")
+	log_path = Path(__file__).resolve().parent / "log.txt"
+	with log_path.open("w", encoding="utf-8", buffering=1) as log_file:
+		tee_stdout = TeeStream(sys.stdout, log_file)
+		tee_stderr = TeeStream(sys.stderr, log_file)
+		with redirect_stdout(tee_stdout), redirect_stderr(tee_stderr):
+			try:
+				asyncio.run(main())
+			except KeyboardInterrupt:
+				print("\n[System] Exiting...")

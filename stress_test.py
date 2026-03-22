@@ -1,6 +1,7 @@
 """Day 6 bounded stress-test scenario for the SHEM Multi-Agent System."""
 
 import asyncio
+import argparse
 from core.environment import WeatherEnvironment
 from core.logger import EvaluationLogger
 from agents.solar_agent import SolarAgent
@@ -13,15 +14,33 @@ MANAGER_AGENT_JID = "home_manager@localhost"
 MANAGER_AGENT_PASSWORD = "manager123"
 
 
-async def run_stress_test():
+async def run_stress_test(
+	total_steps: int = 25,
+	cloudy_probability: float = 0.8,
+	high_sunlight_duration: int = 10,
+	cloud_stress_duration: int = 5,
+):
 	"""
-	Run the finite 25-step Day/Night stress scenario and print evaluation metrics.
+	Run the bounded Day/Night stress scenario and print evaluation metrics.
 
 	Stress profile:
-	  T=0-10   HIGH_SUNLIGHT  — clear sky, 900-1200 W
-	  T=11-15  CLOUD_STRESS   — 80% cloud probability, 80-220 W when cloudy
-	  T=16-24  ZERO_SUNLIGHT  — night, 0 W
+	  T=0-(high_sunlight_duration-1)            HIGH_SUNLIGHT   — clear sky, 900-1200 W
+	  T=high_sunlight_duration-(+cloud_stress)  CLOUD_STRESS    — configurable cloud probability
+	  remaining timesteps                       ZERO_SUNLIGHT   — night, 0 W
 	"""
+	if total_steps <= 0:
+		raise ValueError("total_steps must be a positive integer")
+	if not 0.0 <= cloudy_probability <= 1.0:
+		raise ValueError("cloudy_probability must be between 0.0 and 1.0")
+	if high_sunlight_duration < 0:
+		raise ValueError("high_sunlight_duration must be >= 0")
+	if cloud_stress_duration < 0:
+		raise ValueError("cloud_stress_duration must be >= 0")
+
+	high_sunlight_end = high_sunlight_duration - 1
+	cloud_stress_end = high_sunlight_end + cloud_stress_duration
+	night_start = cloud_stress_end + 1
+
 	print("=" * 60)
 	print("SHEM - Smart Home Energy Manager")
 	print("Day 6: System Evaluation Stress Test")
@@ -31,12 +50,28 @@ async def run_stress_test():
 	evaluation_logger = EvaluationLogger(csv_path="evaluation_results.csv")
 
 	# ═══════════════════════════════════════════════════════════════
-	# Step 1: Scripted day/night environment (25 steps, 80% cloud stress)
+	# Step 1: Scripted day/night environment
 	# ═══════════════════════════════════════════════════════════════
 	print("[System] Initializing Weather Environment...")
-	weather_env = WeatherEnvironment(cloudy_probability=0.8, total_steps=25)
+	weather_env = WeatherEnvironment(
+		cloudy_probability=cloudy_probability,
+		total_steps=total_steps,
+		high_sunlight_end=high_sunlight_end,
+		cloud_stress_end=cloud_stress_end,
+	)
 	print("[System] Weather Environment initialized")
-	print("[System] Stress profile: T=0-10 high sunlight | T=11-15 cloud stress | T=16-24 night")
+	print(
+		"[System] Stress profile: "
+		f"T=0-{high_sunlight_end} high sunlight | "
+		f"T={high_sunlight_end + 1}-{cloud_stress_end} cloud stress | "
+		f"T={night_start}+ night"
+	)
+	print(
+		f"[System] Config: total_steps={total_steps}, "
+		f"high_sunlight_duration={high_sunlight_duration}, "
+		f"cloud_stress_duration={cloud_stress_duration}, "
+		f"cloudy_probability={cloudy_probability:.2f}"
+	)
 	print()
 
 	# ═══════════════════════════════════════════════════════════════
@@ -71,7 +106,7 @@ async def run_stress_test():
 	print()
 
 	print("=" * 60)
-	print("System is running the 25-step stress test.")
+	print(f"System is running the {total_steps}-step stress test.")
 	print("=" * 60)
 	print()
 
@@ -111,8 +146,46 @@ async def run_stress_test():
 		print("=" * 60)
 
 
+def parse_args() -> argparse.Namespace:
+	"""Parse command-line args for stress test configuration."""
+	parser = argparse.ArgumentParser(description="Run the SHEM bounded stress test.")
+	parser.add_argument(
+		"--steps",
+		type=int,
+		default=25,
+		help="Total number of stress-test steps (default: 25)",
+	)
+	parser.add_argument(
+		"--high-sunlight-duration",
+		type=int,
+		default=10,
+		help="Number of HIGH_SUNLIGHT timesteps (default: 10)",
+	)
+	parser.add_argument(
+		"--cloud-stress-duration",
+		type=int,
+		default=5,
+		help="Number of CLOUD_STRESS timesteps after high-sunlight phase (default: 5)",
+	)
+	parser.add_argument(
+		"--cloudy-probability",
+		type=float,
+		default=0.8,
+		help="Cloudy probability used by WeatherEnvironment (0.0 to 1.0, default: 0.8)",
+	)
+	return parser.parse_args()
+
+
 if __name__ == "__main__":
+	args = parse_args()
 	try:
-		asyncio.run(run_stress_test())
+		asyncio.run(
+			run_stress_test(
+				total_steps=args.steps,
+				cloudy_probability=args.cloudy_probability,
+				high_sunlight_duration=args.high_sunlight_duration,
+				cloud_stress_duration=args.cloud_stress_duration,
+			)
+		)
 	except KeyboardInterrupt:
 		print("\n[System] Exiting...")
