@@ -117,20 +117,18 @@ def plot_stress_test_dashboard(csv_path: Path, output_path: Path) -> None:
 			else 0.0,
 		}
 
-	# Deduplicate timesteps for line/bar plots.
-	# Use the latest transition per timestep for battery; use solar cycle rows for wattage.
-	ts_dict = {}
+	# Aggregate battery values per timestep for a more informative plot.
+	battery_by_ts = {}
 	for row in transition_rows:
-		ts_dict[row["timestep"]] = {
-			"battery": row["battery_level"],
-			"health": row["battery_health"],
-		}
+		ts = row["timestep"]
+		battery_by_ts.setdefault(ts, []).append(row["battery_level"])
 
 	wattage_by_ts = {row["timestep"]: row["wattage"] for row in solar_rows}
 
-	sorted_ts = sorted(ts_dict.keys())
-	sorted_battery = [ts_dict[ts]["battery"] for ts in sorted_ts]
-	sorted_health = [ts_dict[ts]["health"] for ts in sorted_ts]
+	sorted_ts = sorted(battery_by_ts.keys())
+	sorted_battery_min = [min(battery_by_ts[ts]) for ts in sorted_ts]
+	sorted_battery_max = [max(battery_by_ts[ts]) for ts in sorted_ts]
+	sorted_battery_avg = [float(np.mean(battery_by_ts[ts])) for ts in sorted_ts]
 	sorted_wattage = [wattage_by_ts.get(ts, 0.0) for ts in sorted_ts]
 
 	# Create dashboard
@@ -139,13 +137,22 @@ def plot_stress_test_dashboard(csv_path: Path, output_path: Path) -> None:
 
 	# Plot 1: Battery Level Over Time
 	ax1 = fig.add_subplot(gs[0, :])
+	ax1.fill_between(
+		sorted_ts,
+		sorted_battery_min,
+		sorted_battery_max,
+		color="#1f77b4",
+		alpha=0.2,
+		label="Battery range (min-max)",
+	)
 	ax1.plot(
 		sorted_ts,
-		sorted_battery,
+		sorted_battery_avg,
 		marker="o",
 		linewidth=2.5,
 		color="#1f77b4",
 		markersize=4,
+		label="Battery average",
 	)
 	phase_segments = []
 	if sorted_ts:
@@ -173,7 +180,13 @@ def plot_stress_test_dashboard(csv_path: Path, output_path: Path) -> None:
 	ax1.set_ylabel("Battery Level (%)")
 	ax1.grid(True, linestyle="--", alpha=0.3)
 	ax1.legend(loc="upper right", fontsize=9)
-	ax1.set_ylim(35, 50)
+	batt_min = min(sorted_battery_min)
+	batt_max = max(sorted_battery_max)
+	if batt_min == batt_max:
+		ax1.set_ylim(max(0, batt_min - 5), min(100, batt_max + 5))
+	else:
+		padding = max(1.0, (batt_max - batt_min) * 0.2)
+		ax1.set_ylim(max(0, batt_min - padding), min(100, batt_max + padding))
 
 	# Plot 2: Solar Wattage Input
 	ax2 = fig.add_subplot(gs[1, 0])

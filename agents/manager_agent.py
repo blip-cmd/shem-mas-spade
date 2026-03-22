@@ -83,6 +83,8 @@ class IdleState(FailureAwareState):
 		if self.maybe_handle_battery_failure(self.agent.IDLE):
 			return
 
+		await asyncio.sleep(1)
+
 		solar_status = self.agent.current_solar_belief
 
 		self.agent.battery_level = max(0, self.agent.battery_level - 2)
@@ -138,6 +140,8 @@ class SystemCheckState(FailureAwareState):
 			"Reverting to Safe Mode (Internal Model only)."
 		)
 
+		await asyncio.sleep(1)
+
 		if self.maybe_handle_battery_failure(self.agent.SYSTEM_CHECK):
 			return
 
@@ -164,6 +168,8 @@ class EmergencyState(FailureAwareState):
 	async def run(self):
 		if self.maybe_handle_battery_failure(self.agent.EMERGENCY):
 			return
+
+		await asyncio.sleep(1)
 
 		solar_status = self.agent.current_solar_belief
 
