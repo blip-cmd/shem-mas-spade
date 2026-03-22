@@ -1,0 +1,414 @@
+2. Interactive HTML App Implementation
+Save the code below as an .html file and open it in any web browser. It visually maps the Prometheus phases (System Specification, Architectural Design, Detailed Design) exactly as documented in the book
+. It features your requested Edit/View password toggle, and clicking the "System goals" or "System Overview" boxes opens an interactive panel with Doc, Diag, and Code tabs
+.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHEM Interactive Prometheus Design</title>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --bg: #ecf0f1;
+            --box-bg: #ffffff;
+            --border: #bdc3c7;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--primary);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .mode-toggle button {
+            padding: 8px 16px;
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .mode-toggle button:hover { background-color: #2980b9; }
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .prometheus-flow {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 2px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .phase-section {
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px dashed var(--accent);
+            border-radius: 8px;
+            padding: 15px;
+            position: relative;
+        }
+        .phase-title {
+            position: absolute;
+            top: -12px;
+            left: 15px;
+            background: var(--bg);
+            padding: 0 10px;
+            font-weight: bold;
+            color: var(--accent);
+        }
+        .node-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+        .node-box {
+            background: var(--box-bg);
+            border: 2px solid var(--primary);
+            border-radius: 6px;
+            padding: 15px 25px;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            min-width: 120px;
+        }
+        .node-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            border-color: var(--accent);
+        }
+        .details-panel {
+            flex: 1;
+            background: var(--box-bg);
+            display: flex;
+            flex-direction: column;
+        }
+        .placeholder-msg {
+            margin: auto;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        .content-area {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+        .tabs {
+            display: flex;
+            background: #e0e6ed;
+            border-bottom: 2px solid var(--border);
+        }
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            font-weight: bold;
+            border-right: 1px solid var(--border);
+        }
+        .tab.active {
+            background: var(--box-bg);
+            color: var(--accent);
+            border-bottom: 2px solid var(--box-bg);
+            margin-bottom: -2px;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .tab-content.active { display: block; }
+        .edit-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .password-box {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .password-box input {
+            padding: 10px;
+            margin: 10px 0;
+            width: 80%;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+        .password-box button {
+            padding: 10px 20px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        textarea {
+            width: 100%;
+            height: 300px;
+            font-family: monospace;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h2>SHEM: Prometheus Design Interactive Explorer</h2>
+        <div class="mode-toggle">
+            <span id="modeLabel">Current Mode: VIEW</span>
+            <button onclick="requestEditMode()">Toggle Edit Mode</button>
+        </div>
+    </header>
+
+    <div class="edit-overlay" id="pwdOverlay">
+        <div class="password-box">
+            <h3>Enter Edit Password</h3>
+            <input type="password" id="pwdInput" placeholder="Password...">
+            <br>
+            <button onclick="checkPassword()">Submit</button>
+            <button onclick="closePasswordBox()" style="background: #e74c3c;">Cancel</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Left Side: Prometheus Flowchart -->
+        <div class="prometheus-flow">
+            
+            <div class="phase-section">
+                <div class="phase-title">System Specification</div>
+                <div class="node-container">
+                    <div class="node-box" onclick="loadContent('system-goals')">System goals</div>
+                    <div class="node-box" onclick="loadContent('scenarios')">Scenarios</div>
+                    <div class="node-box" style="background:#e0e0e0;">Actions, percepts</div>
+                </div>
+            </div>
+
+            <div class="phase-section">
+                <div class="phase-title">Architectural Design</div>
+                <div class="node-container">
+                    <div class="node-box" onclick="loadContent('system-overview')">System Overview</div>
+                    <div class="node-box" onclick="loadContent('protocols')">Protocols</div>
+                    <div class="node-box" style="background:#e0e0e0;">Agent descriptors</div>
+                </div>
+            </div>
+
+            <div class="phase-section">
+                <div class="phase-title">Detailed Design</div>
+                <div class="node-container">
+                    <div class="node-box" onclick="loadContent('agent-overview')">Agent Overview</div>
+                    <div class="node-box" onclick="loadContent('fsm')">FSM / Process</div>
+                    <div class="node-box" style="background:#e0e0e0;">Plan descriptors</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Details & Tabs -->
+        <div class="details-panel">
+            <div class="placeholder-msg" id="placeholder">
+                <h2>Click a box on the left to explore the SHEM architecture.</h2>
+            </div>
+            
+            <div class="content-area" id="contentArea">
+                <h2 id="contentTitle" style="padding: 0 20px;">Title</h2>
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('doc')">Documentation</div>
+                    <div class="tab" onclick="switchTab('diag')">Diagram</div>
+                    <div class="tab" onclick="switchTab('code')">Code (SPADE)</div>
+                </div>
+
+                <div id="doc" class="tab-content active">
+                    <div id="docText"></div>
+                    <textarea id="docEdit" style="display:none;"></textarea>
+                </div>
+                
+                <div id="diag" class="tab-content">
+                    <div class="mermaid" id="mermaidRender"></div>
+                </div>
+                
+                <div id="code" class="tab-content">
+                    <pre><code id="codeText"></code></pre>
+                    <textarea id="codeEdit" style="display:none;"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isEditMode = false;
+        
+        // SHEM Data Object mapping
+        const shemData = {
+            'system-goals': {
+                title: "System Goals",
+                doc: "This phase answers what the system should do. The top-level goal is Energy Self-Sufficiency, decomposed into Maintenance (Preserve Battery Health) and Achievement (Optimize Charging).",
+                diag: `graph TD
+    A([Top Goal: Energy Self-Sufficiency])
+    A --> B([Maintenance Goal: Preserve Battery Health])
+    A --> C([Achievement Goal: Optimize Charging])
+    B --> D[Action: Trigger Emergency if SoC < 20%]
+    C --> E[Action: Charge if Solar OPTIMAL & SoC < 90%]`,
+                code: "# Goals are conceptually mapped to SPADE Behaviours\nclass OptimizeCharging(CyclicBehaviour):\n    pass"
+            },
+            'system-overview': {
+                title: "System Overview",
+                doc: "Groups functionalities into Agents and determines coupling. The SolarAgent acts as a reflex sensor, passing FIPA-ACL messages to the BDI HomeManagerAgent.",
+                diag: `graph LR
+    Env((Stochastic Weather)) -. "Percept: Wattage" .-> SA[SolarAgent]
+    SA -- "Protocol: Weather-Monitor" --> HMA[HomeManagerAgent]
+    HMA -. "Read/Write Belief" .-> DB[(Battery DB)]
+    HMA -- "Action: State" --> Act[Virtual Actuators]`,
+                code: "class HomeManagerAgent(Agent):\n    async def setup(self):\n        self.add_behaviour(BatteryManagementCapability())"
+            },
+            'protocols': {
+                title: "Protocols (Interaction Design)",
+                doc: "Uses Agent UML (AUML) to formalize interaction protocols. Communication follows the asynchronous FIPA-ACL standard.",
+                diag: `sequenceDiagram
+    participant SA as SolarAgent
+    participant HMA as HomeManagerAgent
+    loop Every 3 seconds
+        alt Wattage >= 300W
+            SA->>HMA: INFORM "OPTIMAL"
+        else Wattage < 300W
+            SA->>HMA: INFORM "LOW"
+        end
+    end`,
+                code: "msg = Message(to='manager@localhost')\nmsg.set_metadata('performative', 'INFORM')\nmsg.body = 'OPTIMAL'"
+            },
+            'fsm': {
+                title: "FSM & Dynamic Process",
+                doc: "To handle the dynamic environment, HomeManagerAgent uses a Finite State Machine. If communication drops or an overheat occurs, it safely drops its achievement goal.",
+                diag: `stateDiagram-v2
+    [*] --> IDLE
+    IDLE --> CHARGING : Solar=OPTIMAL & SoC < 90%
+    CHARGING --> IDLE : SoC >= 90% or Solar=LOW
+    CHARGING --> SYSTEM_CHECK : Sensor Timeout
+    SYSTEM_CHECK --> IDLE : Sensor Reconnected`,
+                code: "class BatteryManagementCapability(FSMBehaviour):\n    async def setup(self):\n        self.add_state(name='IDLE', state=IdleState(), initial=True)\n        self.add_state(name='CHARGING', state=ChargingState())"
+            }
+        };
+
+        function requestEditMode() {
+            if(isEditMode) {
+                isEditMode = false;
+                document.getElementById('modeLabel').innerText = "Current Mode: VIEW";
+                toggleEditors();
+            } else {
+                document.getElementById('pwdOverlay').style.display = 'flex';
+            }
+        }
+
+        function closePasswordBox() {
+            document.getElementById('pwdOverlay').style.display = 'none';
+            document.getElementById('pwdInput').value = '';
+        }
+
+        function checkPassword() {
+            const pwd = document.getElementById('pwdInput').value;
+            // Simulated password check
+            if(pwd === 'admin123') { 
+                isEditMode = true;
+                document.getElementById('modeLabel').innerText = "Current Mode: EDIT";
+                closePasswordBox();
+                toggleEditors();
+            } else {
+                alert('Incorrect Password');
+            }
+        }
+
+        function toggleEditors() {
+            const docText = document.getElementById('docText');
+            const docEdit = document.getElementById('docEdit');
+            const codeText = document.getElementById('codeText');
+            const codeEdit = document.getElementById('codeEdit');
+
+            if(isEditMode) {
+                docText.style.display = 'none';
+                docEdit.style.display = 'block';
+                docEdit.value = docText.innerText;
+
+                codeText.style.display = 'none';
+                codeEdit.style.display = 'block';
+                codeEdit.value = codeText.innerText;
+            } else {
+                docText.style.display = 'block';
+                docEdit.style.display = 'none';
+                docText.innerText = docEdit.value;
+
+                codeText.style.display = 'block';
+                codeEdit.style.display = 'none';
+                codeText.innerText = codeEdit.value;
+            }
+        }
+
+        function loadContent(nodeKey) {
+            document.getElementById('placeholder').style.display = 'none';
+            document.getElementById('contentArea').style.display = 'flex';
+            
+            const data = shemData[nodeKey] || { title: "WIP", doc: "Not documented yet.", diag: "graph TD\nA[WIP]", code: "# WIP" };
+            
+            document.getElementById('contentTitle').innerText = data.title;
+            
+            document.getElementById('docText').innerText = data.doc;
+            document.getElementById('docEdit').value = data.doc;
+            
+            document.getElementById('codeText').innerText = data.code;
+            document.getElementById('codeEdit').value = data.code;
+
+            // Render Mermaid
+            const mermaidDiv = document.getElementById('mermaidRender');
+            mermaidDiv.removeAttribute('data-processed');
+            mermaidDiv.innerHTML = data.diag;
+            mermaid.run({
+                nodes: [mermaidDiv]
+            });
+
+            switchTab('doc');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            
+            const tabs = document.querySelectorAll('.tab');
+            if(tabId === 'doc') tabs.classList.add('active');
+            if(tabId === 'diag') tabs[2].classList.add('active');
+            if(tabId === 'code') tabs[17].classList.add('active');
+        }
+    </script>
+</body>
+</html>

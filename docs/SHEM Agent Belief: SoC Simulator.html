@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHEM Agent Belief: SoC Simulator</title>
+    <style>
+        :root {
+            --bg-color: #1e1e24;
+            --panel-bg: #2b2b36;
+            --text-main: #ffffff;
+            --text-muted: #9ba1a6;
+            --green: #28a745;
+            --yellow: #ffc107;
+            --red: #dc3545;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .widget-container {
+            background-color: var(--panel-bg);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            gap: 50px;
+            align-items: center;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        /* Battery CSS */
+        .battery-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .battery-cap {
+            width: 40px;
+            height: 15px;
+            background-color: #555;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+
+        .battery-body {
+            width: 120px;
+            height: 250px;
+            border: 4px solid #555;
+            border-radius: 12px;
+            padding: 4px;
+            position: relative;
+            background-color: #111;
+            display: flex;
+            align-items: flex-end; /* Fills from the bottom */
+        }
+
+        .battery-fill {
+            width: 100%;
+            height: 86%; /* Default starting height */
+            background-color: var(--green);
+            border-radius: 6px;
+            transition: all 0.4s ease-out;
+            box-shadow: 0 0 15px var(--green);
+        }
+
+        /* Controls CSS */
+        .controls {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .data-readout {
+            background-color: #1a1a20;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 5px solid var(--green);
+            transition: border-color 0.4s ease;
+        }
+
+        h2 { margin: 0 0 10px 0; font-size: 24px; }
+        
+        .value-display {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin: 0;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Slider CSS */
+        .slider-container {
+            margin-top: 20px;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #555;
+            border-radius: 4px;
+        }
+
+        .agent-status {
+            margin-top: 15px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="widget-container">
+        <div class="battery-wrapper">
+            <div class="battery-cap"></div>
+            <div class="battery-body">
+                <div class="battery-fill" id="batteryFill"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div>
+                <h2>Agent Belief State</h2>
+                <p class="subtitle">Translation of Physical Sensor Data</p>
+            </div>
+
+            <div class="data-readout" id="readoutBox">
+                <p class="subtitle">Calculated SoC (Belief)</p>
+                <p class="value-display" id="socDisplay">86%</p>
+                <p class="subtitle" style="margin-top: 10px;">Raw Voltage (Percept): <span id="voltageDisplay">12.4</span>V</p>
+                <p class="agent-status" id="agentStatus">State: IDLE / CHARGING</p>
+            </div>
+
+            <div class="slider-container">
+                <p class="subtitle">Simulate Voltage Sensor</p>
+                <input type="range" id="voltageSlider" min="10.5" max="12.7" step="0.1" value="12.4">
+                <div style="display: flex; justify-content: space-between; color: #9ba1a6; font-size: 12px; margin-top: 5px;">
+                    <span>10.5V (Dead)</span>
+                    <span>12.7V (Full)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const voltageSlider = document.getElementById('voltageSlider');
+        const voltageDisplay = document.getElementById('voltageDisplay');
+        const socDisplay = document.getElementById('socDisplay');
+        const batteryFill = document.getElementById('batteryFill');
+        const readoutBox = document.getElementById('readoutBox');
+        const agentStatus = document.getElementById('agentStatus');
+
+        // Update logic
+        function updateSystem() {
+            const voltage = parseFloat(voltageSlider.value);
+            voltageDisplay.textContent = voltage.toFixed(1);
+
+            // The Math: Linear interpolation from 10.5V to 12.7V
+            let soc = ((voltage - 10.5) / (12.7 - 10.5)) * 100;
+            
+            // Cap between 0 and 100
+            soc = Math.max(0, Math.min(100, Math.round(soc)));
+            
+            socDisplay.textContent = soc + '%';
+            batteryFill.style.height = soc + '%';
+
+            // Color coding and Agent State Logic
+            if (soc > 50) {
+                batteryFill.style.backgroundColor = 'var(--green)';
+                batteryFill.style.boxShadow = '0 0 15px var(--green)';
+                readoutBox.style.borderLeftColor = 'var(--green)';
+                agentStatus.textContent = "Agent Intention: IDLE / CHARGING";
+                agentStatus.style.color = 'var(--green)';
+            } else if (soc > 20) {
+                batteryFill.style.backgroundColor = 'var(--yellow)';
+                batteryFill.style.boxShadow = '0 0 15px var(--yellow)';
+                readoutBox.style.borderLeftColor = 'var(--yellow)';
+                agentStatus.textContent = "Agent Intention: IDLE (Warning)";
+                agentStatus.style.color = 'var(--yellow)';
+            } else {
+                // Emergency State (Below 20%)
+                batteryFill.style.backgroundColor = 'var(--red)';
+                batteryFill.style.boxShadow = '0 0 15px var(--red)';
+                readoutBox.style.borderLeftColor = 'var(--red)';
+                agentStatus.textContent = "Agent Intention: EMERGENCY (Load Shedding!)";
+                agentStatus.style.color = 'var(--red)';
+            }
+        }
+
+        // Event Listener
+        voltageSlider.addEventListener('input', updateSystem);
+
+        // Initialize on load
+        updateSystem();
+    </script>
+</body>
+</html>

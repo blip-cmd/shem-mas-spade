@@ -206,3 +206,6 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 server.db
+docs/shem.md
+docs/presentation.md
+docs/implementation phase.md
