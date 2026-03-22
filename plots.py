@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import argparse
 import csv
+from collections import defaultdict
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -18,7 +20,9 @@ def load_evaluation_data(csv_path: Path) -> dict:
 
 	with csv_path.open("r", newline="", encoding="utf-8") as csv_file:
 		reader = csv.DictReader(csv_file)
+		row_index = 0
 		for row in reader:
+			row_index += 1
 			timestep = row.get("timestep")
 			if not timestep:
 				continue
@@ -31,6 +35,7 @@ def load_evaluation_data(csv_path: Path) -> dict:
 			if event_type == "solar_cycle":
 				data["solar_cycles"].append(
 					{
+						"row_index": row_index,
 						"timestep": ts,
 						"phase": row.get("phase", ""),
 						"wattage": float(row.get("wattage") or 0.0),
@@ -41,6 +46,7 @@ def load_evaluation_data(csv_path: Path) -> dict:
 				reaction_time_raw = row.get("reaction_time_ms", "")
 				data["state_transitions"].append(
 					{
+						"row_index": row_index,
 						"timestep": ts,
 						"phase": row.get("phase", ""),
 						"battery_level": float(row.get("battery_level") or 0.0),
@@ -55,81 +61,157 @@ def load_evaluation_data(csv_path: Path) -> dict:
 	return data
 
 
-def plot_stress_test_dashboard(csv_path: Path, output_path: Path) -> None:
-	"""Generate a comprehensive stress test evaluation dashboard."""
-	data = load_evaluation_data(csv_path)
-	if not data["solar_cycles"] and not data["state_transitions"]:
-		raise ValueError("No evaluation rows found in evaluation CSV.")
-
-	# Focus dashboard on the Day 6 stress window when available.
-	stress_solar = [row for row in data["solar_cycles"] if 0 <= row["timestep"] <= 24]
-	stress_transitions = [row for row in data["state_transitions"] if 0 <= row["timestep"] <= 24]
-	if stress_solar:
-		solar_rows = stress_solar
-		transition_rows = stress_transitions
-	else:
-		solar_rows = data["solar_cycles"]
-		transition_rows = data["state_transitions"]
-
-	# Extract unique timestep entries and aggregate by phase
-	timesteps = sorted(
-		set([row["timestep"] for row in solar_rows] + [row["timestep"] for row in transition_rows])
-	)
-	if not timesteps:
-		raise ValueError("No valid timestep data found.")
-
-	phase_by_ts = {}
-	for row in solar_rows:
-		phase_by_ts[row["timestep"]] = row["phase"]
+def build_timestep_snapshots(transition_rows: list[dict]) -> list[dict]:
+	"""Collapse multiple FSM transitions into one snapshot per timestep."""
+	by_timestep = defaultdict(list)
 	for row in transition_rows:
-		phase_by_ts.setdefault(row["timestep"], row["phase"])
+		by_timestep[row["timestep"]].append(row)
 
-	def get_phase_name(ts: int) -> str:
-		return phase_by_ts.get(ts, "ZERO_SUNLIGHT")
+	snapshots = []
+	for timestep in sorted(by_timestep.keys()):
+		rows = sorted(by_timestep[timestep], key=lambda item: item["row_index"])
+		battery_values = [item["battery_level"] for item in rows]
+		reaction_samples = [
+			item["reaction_time_ms"] for item in rows if item["reaction_time_ms"] is not None
+		]
+		latest = rows[-1]
+		snapshots.append(
+			{
+				"timestep": timestep,
+				"phase": latest["phase"],
+				"battery_min": min(battery_values),
+				"battery_max": max(battery_values),
+				"battery_avg": float(np.mean(battery_values)),
+				"battery_last": latest["battery_level"],
+				"reaction_time_ms": float(np.mean(reaction_samples)) if reaction_samples else None,
+				"transition_count": len(rows),
+			}
+		)
 
-	# Aggregate metrics by phase
-	phase_stats = {"HIGH_SUNLIGHT": {}, "CLOUD_STRESS": {}, "ZERO_SUNLIGHT": {}}
-	phase_colors = {
-		"HIGH_SUNLIGHT": "#FFD700",
-		"CLOUD_STRESS": "#A9A9A9",
-		"ZERO_SUNLIGHT": "#191970",
+	return snapshots
+
+
+def build_phase_stats(
+	phases: list[str],
+	solar_rows: list[dict],
+	transition_rows: list[dict],
+	snapshots: list[dict],
+) -> dict[str, dict]:
+	"""Aggregate phase-level metrics using realistic counting rules."""
+	phase_stats = {
+		phase_name: {
+			"avg_battery": 0.0,
+			"total_grid_energy": 0.0,
+			"safety_violations": 0,
+			"avg_reaction_time": 0.0,
+		}
+		for phase_name in phases
 	}
 
-	for phase_name in phase_stats:
-		phase_solar = [row for row in solar_rows if get_phase_name(row["timestep"]) == phase_name]
-		phase_transitions = [
-			row for row in transition_rows if get_phase_name(row["timestep"]) == phase_name
-		]
+	for phase_name in phases:
+		phase_solar = [row for row in solar_rows if row["phase"] == phase_name]
+		phase_transitions = [row for row in transition_rows if row["phase"] == phase_name]
+		phase_snapshots = [row for row in snapshots if row["phase"] == phase_name]
 		phase_reaction_samples = [
 			row["reaction_time_ms"]
 			for row in phase_transitions
 			if row["reaction_time_ms"] is not None
 		]
-		phase_stats[phase_name] = {
-			"avg_battery": np.mean([row["battery_level"] for row in phase_transitions])
-			if phase_transitions
-			else 0.0,
-			"total_grid_energy": sum(row["grid_energy"] for row in phase_solar)
-			+ sum(row["grid_energy"] for row in phase_transitions),
-			"safety_violations": sum(row["safety_violation"] for row in phase_transitions),
-			"avg_reaction_time": np.mean(phase_reaction_samples)
-			if phase_reaction_samples
-			else 0.0,
-		}
+
+		phase_stats[phase_name]["avg_battery"] = (
+			float(np.mean([row["battery_avg"] for row in phase_snapshots]))
+			if phase_snapshots
+			else 0.0
+		)
+		phase_stats[phase_name]["total_grid_energy"] = sum(row["grid_energy"] for row in phase_solar) + sum(
+			row["grid_energy"] for row in phase_transitions
+		)
+		phase_stats[phase_name]["avg_reaction_time"] = (
+			float(np.mean(phase_reaction_samples)) if phase_reaction_samples else 0.0
+		)
+
+	# Count safety violations as safe->unsafe edges (same semantics as logger summary).
+	ordered_transitions = sorted(
+		transition_rows,
+		key=lambda row: (row["timestep"], row["row_index"]),
+	)
+	unsafe_active = False
+	for row in ordered_transitions:
+		unsafe_now = bool(row["safety_violation"])
+		if unsafe_now and not unsafe_active:
+			phase_name = row["phase"]
+			if phase_name in phase_stats:
+				phase_stats[phase_name]["safety_violations"] += 1
+		unsafe_active = unsafe_now
+
+	return phase_stats
+
+
+def plot_stress_test_dashboard(
+	csv_path: Path,
+	output_path: Path,
+	*,
+	display_limit: int | None = 300,
+) -> None:
+	"""Generate a comprehensive stress test evaluation dashboard."""
+	data = load_evaluation_data(csv_path)
+	if not data["solar_cycles"] and not data["state_transitions"]:
+		raise ValueError("No evaluation rows found in evaluation CSV.")
+
+	solar_rows = data["solar_cycles"]
+	transition_rows = data["state_transitions"]
+	snapshots = build_timestep_snapshots(transition_rows)
+
+	# Extract unique timestep entries.
+	timesteps = sorted(set([row["timestep"] for row in solar_rows] + [row["timestep"] for row in snapshots]))
+	if not timesteps:
+		raise ValueError("No valid timestep data found.")
+
+	phase_by_ts: dict[int, str] = {}
+	for row in solar_rows:
+		phase_by_ts[row["timestep"]] = row["phase"]
+	for row in snapshots:
+		phase_by_ts.setdefault(row["timestep"], row["phase"])
+
+	def get_phase_name(ts: int) -> str:
+		return phase_by_ts.get(ts, "ZERO_SUNLIGHT")
+
+	# Aggregate metrics by phase.
+	observed_phases = {get_phase_name(ts) for ts in timesteps}
+	phase_order = ["HIGH_SUNLIGHT", "CLOUD_STRESS", "ZERO_SUNLIGHT"]
+	extra_phases = sorted([phase for phase in observed_phases if phase not in phase_order])
+	phases = [phase for phase in phase_order if phase in observed_phases] + extra_phases
+	if not phases:
+		phases = ["ZERO_SUNLIGHT"]
+
+	phase_colors = {
+		"HIGH_SUNLIGHT": "#FFD700",
+		"CLOUD_STRESS": "#A9A9A9",
+		"ZERO_SUNLIGHT": "#191970",
+	}
+	phase_stats = build_phase_stats(phases, solar_rows, transition_rows, snapshots)
 
 	# Aggregate battery values per timestep for a more informative plot.
-	battery_by_ts = {}
-	for row in transition_rows:
-		ts = row["timestep"]
-		battery_by_ts.setdefault(ts, []).append(row["battery_level"])
+	sorted_ts = [row["timestep"] for row in snapshots]
+	sorted_battery_min = [row["battery_min"] for row in snapshots]
+	sorted_battery_max = [row["battery_max"] for row in snapshots]
+	sorted_battery_avg = [row["battery_avg"] for row in snapshots]
 
-	wattage_by_ts = {row["timestep"]: row["wattage"] for row in solar_rows}
+	wattage_samples_by_ts: dict[int, list[float]] = defaultdict(list)
+	for row in solar_rows:
+		wattage_samples_by_ts[row["timestep"]].append(row["wattage"])
+	sorted_wattage = [
+		float(np.mean(wattage_samples_by_ts.get(ts, [0.0])))
+		for ts in sorted_ts
+	]
 
-	sorted_ts = sorted(battery_by_ts.keys())
-	sorted_battery_min = [min(battery_by_ts[ts]) for ts in sorted_ts]
-	sorted_battery_max = [max(battery_by_ts[ts]) for ts in sorted_ts]
-	sorted_battery_avg = [float(np.mean(battery_by_ts[ts])) for ts in sorted_ts]
-	sorted_wattage = [wattage_by_ts.get(ts, 0.0) for ts in sorted_ts]
+	# Keep chart readable on very long runs while preserving summary stats across full data.
+	if display_limit is not None and display_limit > 0 and len(sorted_ts) > display_limit:
+		sorted_ts = sorted_ts[-display_limit:]
+		sorted_battery_min = sorted_battery_min[-display_limit:]
+		sorted_battery_max = sorted_battery_max[-display_limit:]
+		sorted_battery_avg = sorted_battery_avg[-display_limit:]
+		sorted_wattage = sorted_wattage[-display_limit:]
 
 	# Create dashboard
 	fig = plt.figure(figsize=(14, 12))
@@ -203,11 +285,10 @@ def plot_stress_test_dashboard(csv_path: Path, output_path: Path) -> None:
 
 	# Plot 3: System Performance Metrics
 	ax3 = fig.add_subplot(gs[1, 1])
-	phases = list(phase_stats.keys())
 	grid_energy_vals = [
 		phase_stats[p].get("total_grid_energy", 0) for p in phases
 	]
-	colors_list = [phase_colors[p] for p in phases]
+	colors_list = [phase_colors.get(p, "#4C72B0") for p in phases]
 	bars = ax3.bar(phases, grid_energy_vals, color=colors_list, alpha=0.7)
 	ax3.set_title("Total Grid Energy Saved", fontsize=11, fontweight="bold")
 	ax3.set_ylabel("Energy Units")
@@ -267,7 +348,7 @@ def plot_stress_test_dashboard(csv_path: Path, output_path: Path) -> None:
 		)
 
 	fig.suptitle(
-		"SHEM Stress Test Evaluation Dashboard",
+		"SHEM System Performance Dashboard",
 		fontsize=14,
 		fontweight="bold",
 		y=0.98,
@@ -276,17 +357,49 @@ def plot_stress_test_dashboard(csv_path: Path, output_path: Path) -> None:
 	plt.close()
 
 
+def parse_args() -> argparse.Namespace:
+	"""Parse plotting options for window size and input/output paths."""
+	parser = argparse.ArgumentParser(description="Generate SHEM performance dashboard plots.")
+	parser.add_argument(
+		"--csv",
+		default="evaluation_results.csv",
+		help="Path to evaluation CSV input (default: evaluation_results.csv)",
+	)
+	parser.add_argument(
+		"--output",
+		default="battery_level_over_time.png",
+		help="Output image path (default: battery_level_over_time.png)",
+	)
+	parser.add_argument(
+		"--window",
+		type=int,
+		default=300,
+		help="Number of latest timesteps to display in time-series charts (default: 300)",
+	)
+	parser.add_argument(
+		"--full",
+		action="store_true",
+		help="Display all timesteps in time-series charts (ignores --window)",
+	)
+	return parser.parse_args()
+
+
 def main() -> None:
-	"""Read evaluation_results.csv and generate stress test dashboard."""
-	csv_path = Path("evaluation_results.csv")
-	output_path = Path("battery_level_over_time.png")
+	"""Read evaluation CSV and generate a configurable performance dashboard."""
+	args = parse_args()
+	csv_path = Path(args.csv)
+	output_path = Path(args.output)
+	display_limit = None if args.full else args.window
+
+	if display_limit is not None and display_limit <= 0:
+		raise ValueError("--window must be a positive integer when --full is not used.")
 
 	if not csv_path.exists():
 		raise FileNotFoundError(
 			"evaluation_results.csv was not found. Run the stress test before plotting results."
 		)
 
-	plot_stress_test_dashboard(csv_path, output_path)
+	plot_stress_test_dashboard(csv_path, output_path, display_limit=display_limit)
 	print(f"Saved stress test dashboard to {output_path}")
 
 
