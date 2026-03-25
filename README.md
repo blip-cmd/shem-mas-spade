@@ -132,27 +132,46 @@ pip install -r requirements.txt
 
 ### 3. Set up an XMPP server
 
-SPADE requires an XMPP server. A local Prosody setup is the simplest option.
+SPADE requires an XMPP server. **ejabberd is recommended** as it has fewer TLS compatibility issues with SPADE than Prosody.
+
+**Quick setup (recommended):**
+
+```bash
+bash setup-xmpp.sh
+```
+
+This script will:
+- Install ejabberd (if not already installed)
+- Start ejabberd service
+- Register the two agent accounts with the correct passwords
+
+**Manual setup (if script fails):**
+
+```bash
+sudo apt-get install ejabberd
+sudo service ejabberd start
+sudo ejabberdctl register solar_sensor localhost sensor123
+sudo ejabberdctl register home_manager localhost manager123
+```
+
+Agent credentials:
+- `solar_sensor@localhost` password: `sensor123`
+- `home_manager@localhost` password: `manager123`
+
+**Alternative: Prosody (if you prefer)**
+
+If you want to use Prosody instead:
 
 ```bash
 sudo apt-get install prosody
 sudo prosodyctl adduser solar_sensor@localhost
 sudo prosodyctl adduser home_manager@localhost
 sudo service prosody start
-sudo service prosody status
-```
-```bash
-# Clean up saved users in Prosody (optional)
-sudo prosodyctl deluser solar_sensor@localhost
-sudo prosodyctl deluser home_manager@localhost
 ```
 
-If you are running inside a non-privileged dev container, `service prosody start` may fail with permission errors (for example: cannot create `/run/prosody` or cannot set gid). In that case, run Prosody outside the container (host OS or VM), then point the agent JIDs in `main.py` to that reachable XMPP domain/host.
+**Troubleshooting XMPP Connection Errors:**
 
-Use these passwords when prompted:
-
-- solar_sensor@localhost: sensor123
-- home_manager@localhost: manager123
+If agents fail to connect with TLS/certificate errors, ensure your XMPP server is configured for insecure (non-TLS) connections on port 5222. Both ejabberd and Prosody support this by default on localhost.
 
 If your XMPP server is not `localhost`, set environment variables before running the app:
 
@@ -261,3 +280,42 @@ Successful execution would produce:
 - JIDs and passwords are currently hardcoded for local coursework testing.
 - The project assumes localhost XMPP connectivity unless credentials in main.py are changed.
 - The plotting script is intentionally lightweight and only depends on the evaluation_results.csv
+
+
+# Quick Start (WSL)
+
+**Fastest way to run the system:**
+
+```bash
+cd /mnt/q/blipping-projects/shem-mas-spade
+bash setup-xmpp.sh
+source .venv-wsl/bin/activate
+python main.py
+```
+
+The `setup-xmpp.sh` script handles:
+- Installing ejabberd XMPP server
+- Registering agent accounts
+- Creating Python virtual environment
+- Installing dependencies
+
+**Alternative: Manual setup (no script)**
+
+```bash
+cd /mnt/q/blipping-projects/shem-mas-spade
+sudo apt update && sudo apt install -y python3-venv python3-pip ejabberd
+sudo service ejabberd start
+sudo ejabberdctl register solar_sensor localhost sensor123
+sudo ejabberdctl register home_manager localhost manager123
+
+python3 -m venv .venv-wsl
+source .venv-wsl/bin/activate
+python -m pip install -U pip setuptools wheel
+pip install -r requirements.txt
+python main.py
+```
+
+**Why ejabberd instead of Prosody?**
+- ejabberd has better out-of-the-box compatibility with SPADE agents
+- Fewer TLS/certificate negotiation issues
+- Simpler setup with lower chance of security-related connection errors

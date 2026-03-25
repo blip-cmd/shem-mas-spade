@@ -209,3 +209,5 @@ server.db
 docs/shem.md
 docs/presentation.md
 docs/implementation phase.md
+
+.venv-wsl
