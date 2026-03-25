@@ -3,6 +3,7 @@
 import asyncio
 import os
 import sys
+import spade
 from pathlib import Path
 from contextlib import redirect_stdout, redirect_stderr
 from core.environment import WeatherEnvironment
@@ -152,14 +153,16 @@ async def main():
 		print("[System] SHEM system shutdown complete")
 		print("=" * 60)
 
-
 if __name__ == "__main__":
-	log_path = Path(__file__).resolve().parent / "log.txt"
-	with log_path.open("w", encoding="utf-8", buffering=1) as log_file:
-		tee_stdout = TeeStream(sys.stdout, log_file)
-		tee_stderr = TeeStream(sys.stderr, log_file)
-		with redirect_stdout(tee_stdout), redirect_stderr(tee_stderr):
-			try:
-				asyncio.run(main())
-			except KeyboardInterrupt:
-				print("\n[System] Exiting...")
+    spade.run(main())
+
+# if __name__ == "__main__":
+# 	log_path = Path(__file__).resolve().parent / "log.txt"
+# 	with log_path.open("w", encoding="utf-8", buffering=1) as log_file:
+# 		tee_stdout = TeeStream(sys.stdout, log_file)
+# 		tee_stderr = TeeStream(sys.stderr, log_file)
+# 		with redirect_stdout(tee_stdout), redirect_stderr(tee_stderr):
+# 			try:
+# 				asyncio.run(main())
+# 			except KeyboardInterrupt:
+# 				print("\n[System] Exiting...")
