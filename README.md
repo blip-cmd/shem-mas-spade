@@ -132,21 +132,25 @@ pip install -r requirements.txt
 
 ### 3. Set up an XMPP server
 
-SPADE requires an XMPP server. **ejabberd is recommended** as it has fewer TLS compatibility issues with SPADE than Prosody.
+SPADE requires an XMPP server. The setup script tries **ejabberd first** (more reliable), then falls back to **Prosody with TLS disabled** if needed.
 
-**Quick setup (recommended):**
+**Automated setup (recommended):**
 
 ```bash
 bash setup-xmpp.sh
 ```
 
-This script will:
-- Install ejabberd (if not already installed)
-- Start ejabberd service
-- Register the two agent accounts with the correct passwords
+This script handles:
+- Attempting ejabberd (if available)
+- Falling back to Prosody with TLS disabled (if ejabberd unavailable or fails to start)
+- Registering both agent accounts automatically
+- Setting up Python virtual environment and dependencies
 
-**Manual setup (if script fails):**
+**Manual setup (if script doesn't work):**
 
+If `bash setup-xmpp.sh` fails, try one of these:
+
+**Option A: ejabberd (lighter weight, fewer TLS issues)**
 ```bash
 sudo apt-get install ejabberd
 sudo service ejabberd start
@@ -154,24 +158,20 @@ sudo ejabberdctl register solar_sensor localhost sensor123
 sudo ejabberdctl register home_manager localhost manager123
 ```
 
-Agent credentials:
-- `solar_sensor@localhost` password: `sensor123`
-- `home_manager@localhost` password: `manager123`
-
-**Alternative: Prosody (if you prefer)**
-
-If you want to use Prosody instead:
-
+**Option B: Prosody (more common, pre-configured here)**
 ```bash
 sudo apt-get install prosody
+# Disable TLS to avoid certificate negotiation issues
+sudo sed -i 's/"tls";/--"tls";/g' /etc/prosody/prosody.cfg.lua
+sudo service prosody restart
 sudo prosodyctl adduser solar_sensor@localhost
 sudo prosodyctl adduser home_manager@localhost
-sudo service prosody start
 ```
 
-**Troubleshooting XMPP Connection Errors:**
-
-If agents fail to connect with TLS/certificate errors, ensure your XMPP server is configured for insecure (non-TLS) connections on port 5222. Both ejabberd and Prosody support this by default on localhost.
+**Troubleshooting:**
+- If XMPP server fails to start, check: `sudo systemctl status ejabberd.service` or `sudo systemctl status prosody.service`
+- If agents still can't connect, verify the server is listening: `nc -zv 127.0.0.1 5222`
+- Both ejabberd and Prosody support insecure (non-TLS) connections on port 5222 by default on localhost
 
 If your XMPP server is not `localhost`, set environment variables before running the app:
 
@@ -284,7 +284,7 @@ Successful execution would produce:
 
 # Quick Start (WSL)
 
-**Fastest way to run the system:**
+**Single command to set up everything:**
 
 ```bash
 cd /mnt/q/blipping-projects/shem-mas-spade
@@ -293,29 +293,46 @@ source .venv-wsl/bin/activate
 python main.py
 ```
 
-The `setup-xmpp.sh` script handles:
-- Installing ejabberd XMPP server
-- Registering agent accounts
-- Creating Python virtual environment
-- Installing dependencies
+**What the setup script does:**
+- Attempts to install and start ejabberd (if available)
+- Falls back to Prosody with TLS disabled if ejabberd unavailable/fails
+- Registers both agent accounts (solar_sensor and home_manager)
+- Creates Python virtual environment
+- Installs all Python dependencies from requirements.txt
 
-**Alternative: Manual setup (no script)**
+**If the script fails:**
+
+Try the manual setup:
 
 ```bash
 cd /mnt/q/blipping-projects/shem-mas-spade
+
+# Install XMPP server (choose one)
 sudo apt update && sudo apt install -y python3-venv python3-pip ejabberd
-sudo service ejabberd start
+# OR: sudo apt update && sudo apt install -y python3-venv python3-pip prosody
+
+# If using Prosody, disable TLS
+sudo sed -i 's/"tls";/--"tls";/g' /etc/prosody/prosody.cfg.lua
+
+# Start XMPP server
+sudo service ejabberd start    # for ejabberd
+# OR: sudo service prosody restart  # for Prosody
+
+# Register agents (choose command matching your XMPP server)
+# For ejabberd:
 sudo ejabberdctl register solar_sensor localhost sensor123
 sudo ejabberdctl register home_manager localhost manager123
 
+# For Prosody:
+# echo "sensor123" | sudo prosodyctl adduser solar_sensor@localhost
+# echo "manager123" | sudo prosodyctl adduser home_manager@localhost
+
+# Setup Python environment
 python3 -m venv .venv-wsl
 source .venv-wsl/bin/activate
 python -m pip install -U pip setuptools wheel
 pip install -r requirements.txt
+
+# Run the app
 python main.py
 ```
-
-**Why ejabberd instead of Prosody?**
-- ejabberd has better out-of-the-box compatibility with SPADE agents
-- Fewer TLS/certificate negotiation issues
-- Simpler setup with lower chance of security-related connection errors
