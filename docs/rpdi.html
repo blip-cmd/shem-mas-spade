@@ -1,413 +1,1226 @@
-2. Interactive HTML App Implementation
-Save the code below as an .html file and open it in any web browser. It visually maps the Prometheus phases (System Specification, Architectural Design, Detailed Design) exactly as documented in the book
-. It features your requested Edit/View password toggle, and clicking the "System goals" or "System Overview" boxes opens an interactive panel with Doc, Diag, and Code tabs
-.
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SHEM Interactive Prometheus Design</title>
-    <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
-    </script>
+    <title>SHEM Prometheus Learning Explorer</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
         :root {
-            --primary: #2c3e50;
-            --secondary: #34495e;
-            --accent: #3498db;
-            --bg: #ecf0f1;
-            --box-bg: #ffffff;
-            --border: #bdc3c7;
+            --ink: #1e2a38;
+            --ink-soft: #5f6c7a;
+            --line: #d8e0e9;
+            --paper: #f7f8fb;
+            --panel: #ffffff;
+            --brand: #0f6ab5;
+            --brand-2: #14a085;
+            --warn: #e54b4b;
+            --phase-a: #eaf4ff;
+            --phase-b: #eafcf4;
+            --phase-c: #fff5e7;
+            --shadow: 0 10px 30px rgba(14, 42, 72, 0.08);
+            --radius: 12px;
         }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 0;
-            background-color: var(--bg);
-            color: var(--primary);
+            color: var(--ink);
+            font-family: 'Space Grotesk', sans-serif;
+            background:
+                radial-gradient(circle at 10% -10%, #d8ebff 0%, transparent 45%),
+                radial-gradient(circle at 90% 0%, #e7fff6 0%, transparent 40%),
+                linear-gradient(180deg, #f9fbff 0%, #f4f7fb 100%);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            height: 100vh;
         }
+
         header {
-            background-color: var(--primary);
-            color: white;
-            padding: 15px 30px;
+            padding: 16px 24px;
+            background: linear-gradient(90deg, #14314d 0%, #0d5a95 100%);
+            color: #fff;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            gap: 16px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
         }
-        .mode-toggle button {
-            padding: 8px 16px;
-            background-color: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.3s;
+
+        .title-wrap h1 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 0.2px;
         }
-        .mode-toggle button:hover { background-color: #2980b9; }
-        .container {
+
+        .title-wrap p {
+            margin: 4px 0 0;
+            font-size: 0.9rem;
+            opacity: 0.85;
+        }
+
+        .header-tools {
             display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .badge {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 999px;
+            padding: 8px 12px;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        button {
+            border: 0;
+            border-radius: 8px;
+            padding: 9px 14px;
+            font-family: inherit;
+            font-size: 0.86rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.16s ease, filter 0.16s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            filter: brightness(0.98);
+        }
+
+        .btn-primary {
+            background: #ffd166;
+            color: #1f2b37;
+        }
+
+        .btn-danger {
+            background: var(--warn);
+            color: #fff;
+        }
+
+        .btn-ghost {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(330px, 42%) 1fr;
+            gap: 18px;
+            padding: 18px;
             flex: 1;
+            min-height: 0;
+        }
+
+        .left-pane,
+        .right-pane {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            min-height: 0;
             overflow: hidden;
         }
-        .prometheus-flow {
-            flex: 1;
-            padding: 20px;
+
+        .left-pane {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .left-scroll {
             overflow-y: auto;
-            border-right: 2px solid var(--border);
+            padding: 14px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
         }
-        .phase-section {
-            background: rgba(52, 152, 219, 0.1);
-            border: 1px dashed var(--accent);
-            border-radius: 8px;
-            padding: 15px;
-            position: relative;
+
+        .phase {
+            border-radius: 10px;
+            padding: 14px;
+            border: 1px dashed var(--line);
+            animation: riseIn 0.35s ease both;
         }
-        .phase-title {
-            position: absolute;
-            top: -12px;
-            left: 15px;
-            background: var(--bg);
-            padding: 0 10px;
-            font-weight: bold;
-            color: var(--accent);
+
+        .phase[data-phase="spec"] {
+            background: var(--phase-a);
         }
-        .node-container {
+
+        .phase[data-phase="arch"] {
+            background: var(--phase-b);
+            animation-delay: 0.08s;
+        }
+
+        .phase[data-phase="detail"] {
+            background: var(--phase-c);
+            animation-delay: 0.16s;
+        }
+
+        .phase h2 {
+            margin: 0 0 12px;
+            font-size: 1.02rem;
+        }
+
+        .node-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+            gap: 10px;
+        }
+
+        .node {
+            width: 100%;
+            text-align: left;
+            border: 2px solid #2a3d52;
+            background: #fff;
+            color: #233243;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            line-height: 1.2;
+        }
+
+        .node.active {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px rgba(15, 106, 181, 0.2);
+        }
+
+        .node small {
+            display: block;
+            color: var(--ink-soft);
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        .meta-strip {
+            margin: 0 14px 14px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fbfdff;
+            padding: 12px;
             display: flex;
+            justify-content: space-between;
+            gap: 10px;
             flex-wrap: wrap;
-            gap: 15px;
-            margin-top: 15px;
-            justify-content: center;
+            font-size: 0.86rem;
+            color: var(--ink-soft);
         }
-        .node-box {
-            background: var(--box-bg);
-            border: 2px solid var(--primary);
-            border-radius: 6px;
-            padding: 15px 25px;
-            cursor: pointer;
-            font-weight: bold;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            transition: transform 0.2s, box-shadow 0.2s;
-            min-width: 120px;
-        }
-        .node-box:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-            border-color: var(--accent);
-        }
-        .details-panel {
-            flex: 1;
-            background: var(--box-bg);
+
+        .right-pane {
             display: flex;
             flex-direction: column;
+            min-height: 0;
         }
-        .placeholder-msg {
+
+        .placeholder {
             margin: auto;
-            color: #7f8c8d;
-            font-style: italic;
+            text-align: center;
+            padding: 24px;
+            color: var(--ink-soft);
         }
-        .content-area {
+
+        .content {
             display: none;
             flex-direction: column;
+            min-height: 0;
             height: 100%;
         }
+
+        .content-head {
+            padding: 16px 18px 8px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .content-head h3 {
+            margin: 0;
+            font-size: 1.18rem;
+        }
+
         .tabs {
             display: flex;
-            background: #e0e6ed;
-            border-bottom: 2px solid var(--border);
+            padding: 0 12px;
+            border-bottom: 1px solid var(--line);
+            gap: 8px;
+            overflow-x: auto;
         }
+
         .tab {
-            padding: 12px 24px;
-            cursor: pointer;
-            font-weight: bold;
-            border-right: 1px solid var(--border);
+            background: transparent;
+            border: 0;
+            border-bottom: 3px solid transparent;
+            border-radius: 0;
+            color: #30465d;
+            font-weight: 700;
+            white-space: nowrap;
+            padding: 12px 10px;
         }
+
         .tab.active {
-            background: var(--box-bg);
-            color: var(--accent);
-            border-bottom: 2px solid var(--box-bg);
-            margin-bottom: -2px;
+            border-bottom-color: var(--brand);
+            color: var(--brand);
         }
-        .tab-content {
-            display: none;
-            padding: 20px;
-            overflow-y: auto;
+
+        .tab-panels {
             flex: 1;
+            min-height: 0;
+            overflow: hidden;
         }
-        .tab-content.active { display: block; }
-        .edit-overlay {
+
+        .panel {
             display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+            height: 100%;
+            overflow-y: auto;
+            padding: 16px 18px;
         }
-        .password-box {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            text-align: center;
+
+        .panel.active {
+            display: block;
         }
-        .password-box input {
-            padding: 10px;
-            margin: 10px 0;
-            width: 80%;
-            border: 1px solid var(--border);
-            border-radius: 4px;
+
+        .doc-view {
+            line-height: 1.6;
+            color: #213344;
+            white-space: pre-wrap;
         }
-        .password-box button {
-            padding: 10px 20px;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+
+        .mermaid-wrap {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 8px;
+            background: #fff;
+            overflow-x: auto;
         }
+
+        pre {
+            margin: 0;
+            background: #111923;
+            color: #d7e8f8;
+            padding: 14px;
+            border-radius: 10px;
+            font-family: 'IBM Plex Mono', monospace;
+            overflow-x: auto;
+            font-size: 0.83rem;
+            line-height: 1.45;
+        }
+
         textarea {
             width: 100%;
-            height: 300px;
-            font-family: monospace;
+            min-height: 270px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 12px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.83rem;
+            line-height: 1.45;
+            resize: vertical;
+        }
+
+        .panel-tools {
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .panel-tools .local {
+            background: #e9f4ff;
+            color: #0e5899;
+        }
+
+        .panel-tools .save {
+            background: #e8fff4;
+            color: #1b7f5e;
+        }
+
+        .panel-tools .reset {
+            background: #fff1f1;
+            color: #ad2d2d;
+        }
+
+        .panel-tools .toggle {
+            background: #f3efff;
+            color: #4d37a6;
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            background: rgba(9, 19, 34, 0.56);
+            z-index: 1000;
+        }
+
+        .pwd-box {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            padding: 20px;
+            width: min(92vw, 360px);
+            box-shadow: var(--shadow);
+        }
+
+        .import-preview-list {
+            max-height: 320px;
+            overflow: auto;
+            margin-top: 8px;
+            padding: 6px;
+            border: 1px dashed var(--line);
+            border-radius: 8px;
+            background: #fcfeff;
+        }
+
+        .import-preview-actions { margin-top: 12px; }
+
+        .pwd-box h4 {
+            margin: 0 0 8px;
+        }
+
+        .pwd-box p {
+            margin: 0 0 12px;
+            color: var(--ink-soft);
+            font-size: 0.9rem;
+        }
+
+        .pwd-box input {
+            width: 100%;
             padding: 10px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            font-family: inherit;
+            margin-bottom: 10px;
+        }
+
+        .pwd-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .status {
+            padding: 10px 18px 14px;
+            color: var(--ink-soft);
+            font-size: 0.82rem;
+            border-top: 1px solid var(--line);
+        }
+
+        .toast {
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            background: rgba(20, 45, 70, 0.95);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 10px;
+            box-shadow: 0 6px 20px rgba(10,20,40,0.3);
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 200ms ease, transform 200ms ease;
+            z-index: 1200;
+            font-size: 0.95rem;
+        }
+
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        @media (max-width: 980px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .left-pane,
+            .right-pane {
+                min-height: 42vh;
+            }
+        }
+
+        @keyframes riseIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
 <body>
-
     <header>
-        <h2>SHEM: Prometheus Design Interactive Explorer</h2>
-        <div class="mode-toggle">
-            <span id="modeLabel">Current Mode: VIEW</span>
-            <button onclick="requestEditMode()">Toggle Edit Mode</button>
+        <div class="title-wrap">
+            <h1>SHEM: Prometheus Design Learning Explorer</h1>
+            <p>System Specification -> Architectural Design -> Detailed Design</p>
+        </div>
+        <div class="header-tools">
+            <span class="badge" id="modeLabel">Mode: VIEW</span>
+            <button class="btn-ghost" id="copyLinkBtn" type="button">Copy Current Topic</button>
+            <button class="btn-primary" id="toggleEditBtn" type="button">Toggle Edit Mode</button>
         </div>
     </header>
 
-    <div class="edit-overlay" id="pwdOverlay">
-        <div class="password-box">
-            <h3>Enter Edit Password</h3>
-            <input type="password" id="pwdInput" placeholder="Password...">
-            <br>
-            <button onclick="checkPassword()">Submit</button>
-            <button onclick="closePasswordBox()" style="background: #e74c3c;">Cancel</button>
+    <main class="layout">
+        <section class="left-pane" aria-label="Prometheus phase map">
+            <div class="left-scroll">
+                <article class="phase" data-phase="spec">
+                    <h2>System Specification</h2>
+                    <div class="node-grid">
+                        <button class="node" type="button" data-node="system-goals">System Goals<small>what and why</small></button>
+                        <button class="node" type="button" data-node="scenarios">Scenarios<small>stories and events</small></button>
+                        <button class="node" type="button" data-node="actions-percepts">Actions, Percepts<small>I/O contract</small></button>
+                    </div>
+                </article>
+
+                <article class="phase" data-phase="arch">
+                    <h2>Architectural Design</h2>
+                    <div class="node-grid">
+                        <button class="node" type="button" data-node="system-overview">System Overview<small>agent structure</small></button>
+                        <button class="node" type="button" data-node="protocols">Protocols<small>interaction design</small></button>
+                        <button class="node" type="button" data-node="agent-descriptors">Agent Descriptors<small>role decomposition</small></button>
+                    </div>
+                </article>
+
+                <article class="phase" data-phase="detail">
+                    <h2>Detailed Design</h2>
+                    <div class="node-grid">
+                        <button class="node" type="button" data-node="agent-overview">Agent Overview<small>internal capabilities</small></button>
+                        <button class="node" type="button" data-node="fsm">FSM / Process<small>runtime transitions</small></button>
+                        <button class="node" type="button" data-node="plan-descriptors">Plan Descriptors<small>decision plans</small></button>
+                    </div>
+                </article>
+            </div>
+            <div class="meta-strip">
+                <span id="progressText">Pick a topic to begin.</span>
+                <span>Tip: Use keys 1-9 to jump between cards.</span>
+            </div>
+        </section>
+
+        <section class="right-pane" aria-label="Learning details">
+            <div class="placeholder" id="placeholder">
+                <h2>Click any card to open guided details</h2>
+                <p>Each topic includes documentation, a live Mermaid diagram, and SPADE-oriented code snippets.</p>
+            </div>
+
+            <div class="content" id="contentArea">
+                <div class="content-head">
+                    <h3 id="contentTitle">Topic</h3>
+                </div>
+
+                <div class="tabs" role="tablist" aria-label="Topic panels">
+                    <button class="tab active" type="button" role="tab" data-tab="doc">Documentation</button>
+                    <button class="tab" type="button" role="tab" data-tab="diag">Diagram</button>
+                    <button class="tab" type="button" role="tab" data-tab="code">Code (SPADE)</button>
+                </div>
+
+                <div class="tab-panels">
+                    <section class="panel active" id="doc" role="tabpanel">
+                        <div class="doc-view" id="docText"></div>
+                        <textarea id="docEdit" hidden></textarea>
+                    </section>
+
+                    <section class="panel" id="diag" role="tabpanel">
+                        <div class="mermaid-wrap">
+                            <div class="mermaid" id="mermaidRender"></div>
+                        </div>
+                    </section>
+
+                    <section class="panel" id="code" role="tabpanel">
+                        <pre id="codeText"></pre>
+                        <textarea id="codeEdit" hidden></textarea>
+                    </section>
+                </div>
+
+                <div class="panel-tools">
+                    <button class="local" id="copyCodeBtn" type="button">Copy Code</button>
+                    <button class="save" id="saveTopicBtn" type="button">Save Topic Edits</button>
+                    <button class="reset" id="resetTopicBtn" type="button">Reset Topic</button>
+                    <button class="toggle" id="importModeBtn" type="button">Import Mode: MERGE</button>
+                    <button class="toggle" id="autoExportBtn" type="button">Auto Export: ON</button>
+                    <button class="toggle" id="importAutoApplyBtn" type="button">Auto-Apply: OFF</button>
+                    <button class="local" id="exportDataBtn" type="button">Export Notes</button>
+                    <button class="local" id="importDataBtn" type="button">Import Notes</button>
+                    <input id="importFileInput" type="file" accept="application/json" hidden>
+                </div>
+            </div>
+
+            <div class="status" id="statusLine">Ready.</div>
+        </section>
+    </main>
+
+    <div class="overlay" id="pwdOverlay" aria-hidden="true">
+        <div class="pwd-box" role="dialog" aria-modal="true" aria-labelledby="pwdTitle">
+            <h4 id="pwdTitle">Enter Edit Password</h4>
+            <p>Use edit mode to annotate docs and code snippets while studying.</p>
+            <input id="pwdInput" type="password" placeholder="Password">
+            <div class="pwd-actions">
+                <button class="btn-danger" id="cancelPwdBtn" type="button">Cancel</button>
+                <button class="btn-primary" id="submitPwdBtn" type="button">Unlock</button>
+            </div>
         </div>
     </div>
 
-    <div class="container">
-        <!-- Left Side: Prometheus Flowchart -->
-        <div class="prometheus-flow">
-            
-            <div class="phase-section">
-                <div class="phase-title">System Specification</div>
-                <div class="node-container">
-                    <div class="node-box" onclick="loadContent('system-goals')">System goals</div>
-                    <div class="node-box" onclick="loadContent('scenarios')">Scenarios</div>
-                    <div class="node-box" style="background:#e0e0e0;">Actions, percepts</div>
-                </div>
-            </div>
-
-            <div class="phase-section">
-                <div class="phase-title">Architectural Design</div>
-                <div class="node-container">
-                    <div class="node-box" onclick="loadContent('system-overview')">System Overview</div>
-                    <div class="node-box" onclick="loadContent('protocols')">Protocols</div>
-                    <div class="node-box" style="background:#e0e0e0;">Agent descriptors</div>
-                </div>
-            </div>
-
-            <div class="phase-section">
-                <div class="phase-title">Detailed Design</div>
-                <div class="node-container">
-                    <div class="node-box" onclick="loadContent('agent-overview')">Agent Overview</div>
-                    <div class="node-box" onclick="loadContent('fsm')">FSM / Process</div>
-                    <div class="node-box" style="background:#e0e0e0;">Plan descriptors</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Side: Details & Tabs -->
-        <div class="details-panel">
-            <div class="placeholder-msg" id="placeholder">
-                <h2>Click a box on the left to explore the SHEM architecture.</h2>
-            </div>
-            
-            <div class="content-area" id="contentArea">
-                <h2 id="contentTitle" style="padding: 0 20px;">Title</h2>
-                <div class="tabs">
-                    <div class="tab active" onclick="switchTab('doc')">Documentation</div>
-                    <div class="tab" onclick="switchTab('diag')">Diagram</div>
-                    <div class="tab" onclick="switchTab('code')">Code (SPADE)</div>
-                </div>
-
-                <div id="doc" class="tab-content active">
-                    <div id="docText"></div>
-                    <textarea id="docEdit" style="display:none;"></textarea>
-                </div>
-                
-                <div id="diag" class="tab-content">
-                    <div class="mermaid" id="mermaidRender"></div>
-                </div>
-                
-                <div id="code" class="tab-content">
-                    <pre><code id="codeText"></code></pre>
-                    <textarea id="codeEdit" style="display:none;"></textarea>
-                </div>
+    <div class="overlay" id="importPreviewOverlay" aria-hidden="true">
+        <div class="pwd-box" role="dialog" aria-modal="true" aria-labelledby="importPreviewTitle">
+            <h4 id="importPreviewTitle">Import Preview</h4>
+            <p id="importPreviewSummary">Preparing preview...</p>
+            <div id="importPreviewList" class="import-preview-list"></div>
+            <div class="pwd-actions import-preview-actions">
+                <button class="btn-danger" id="cancelImportBtn" type="button">Cancel</button>
+                <button class="btn-primary" id="confirmImportBtn" type="button">Confirm Import</button>
             </div>
         </div>
     </div>
 
-    <script>
+    <div id="toast" class="toast" aria-hidden="true"></div>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+        mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: 'loose',
+            theme: 'default'
+        });
+
+        const EDIT_PASSWORD = 'admin123';
+        const STORAGE_KEY = 'shem_prometheus_data_v1';
+
         let isEditMode = false;
-        
-        // SHEM Data Object mapping
-        const shemData = {
+        let currentNode = null;
+        let importMode = 'merge';
+        let autoExportEnabled = true;
+        let importAutoApplyEnabled = false;
+
+        const defaultData = {
             'system-goals': {
-                title: "System Goals",
-                doc: "This phase answers what the system should do. The top-level goal is Energy Self-Sufficiency, decomposed into Maintenance (Preserve Battery Health) and Achievement (Optimize Charging).",
+                title: 'System Goals',
+                doc: 'Defines what the SHEM system must achieve. The top-level objective (Energy Self-Sufficiency) is split into maintenance and achievement goals, so design trade-offs are explicit early in Prometheus.',
                 diag: `graph TD
     A([Top Goal: Energy Self-Sufficiency])
     A --> B([Maintenance Goal: Preserve Battery Health])
     A --> C([Achievement Goal: Optimize Charging])
-    B --> D[Action: Trigger Emergency if SoC < 20%]
-    C --> E[Action: Charge if Solar OPTIMAL & SoC < 90%]`,
-                code: "# Goals are conceptually mapped to SPADE Behaviours\nclass OptimizeCharging(CyclicBehaviour):\n    pass"
+    B --> D[Emergency Action if SoC < 20%]
+    C --> E[Charge Action if Solar = OPTIMAL and SoC < 90%]`,
+                code: `class OptimizeCharging(CyclicBehaviour):
+    async def run(self):
+        if self.agent.beliefs['solar'] == 'OPTIMAL' and self.agent.beliefs['soc'] < 90:
+            await self.agent.start_charging()`
+            },
+            'scenarios': {
+                title: 'Scenarios',
+                doc: 'Scenarios describe realistic event sequences: cloudy morning, battery near-empty, communication loss, and recovery. These stories validate whether goals and system responses are coherent before coding full behavior.',
+                diag: `sequenceDiagram
+    participant U as User/Home
+    participant SA as SolarAgent
+    participant HM as HomeManagerAgent
+    U->>SA: Day starts, weather fluctuates
+    SA->>HM: INFORM wattage
+    HM->>HM: Re-evaluate goals
+    HM-->>U: Trigger charging policy`,
+                code: `scenario = {
+    'name': 'Cloudy morning',
+    'initial_soc': 32,
+    'solar_pattern': [110, 180, 320, 290],
+    'expected_state': 'CHARGING'
+}`
+            },
+            'actions-percepts': {
+                title: 'Actions and Percepts',
+                doc: 'Percepts come from sensors (solar wattage, battery SoC, temperature). Actions are control outputs (charge, hold, alert). This layer is the contract between environment and agent decisions.',
+                diag: `graph LR
+    Env((Environment)) -->|Percepts| Percepts[SoC, Solar, Temp]
+    Percepts --> BDI[HomeManagerAgent Beliefs]
+    BDI -->|Actions| Actuators[Charge / Stop / Alert]`,
+                code: `PERCEPTS = ['soc', 'solar_wattage', 'temperature']
+ACTIONS = ['start_charge', 'stop_charge', 'raise_alert']`
             },
             'system-overview': {
-                title: "System Overview",
-                doc: "Groups functionalities into Agents and determines coupling. The SolarAgent acts as a reflex sensor, passing FIPA-ACL messages to the BDI HomeManagerAgent.",
+                title: 'System Overview',
+                doc: 'Organizes responsibilities among agents. SolarAgent acts as a reflex sender of environment updates, while HomeManagerAgent owns BDI reasoning and state transitions.',
                 diag: `graph LR
-    Env((Stochastic Weather)) -. "Percept: Wattage" .-> SA[SolarAgent]
-    SA -- "Protocol: Weather-Monitor" --> HMA[HomeManagerAgent]
-    HMA -. "Read/Write Belief" .-> DB[(Battery DB)]
-    HMA -- "Action: State" --> Act[Virtual Actuators]`,
-                code: "class HomeManagerAgent(Agent):\n    async def setup(self):\n        self.add_behaviour(BatteryManagementCapability())"
+    Env((Stochastic Weather)) -. Percept: Wattage .-> SA[SolarAgent]
+    SA -- Protocol: Weather-Monitor --> HMA[HomeManagerAgent]
+    HMA -. Read/Write Belief .-> DB[(Battery DB)]
+    HMA -- Action --> Act[Virtual Actuators]`,
+                code: `class HomeManagerAgent(Agent):
+    async def setup(self):
+        self.add_behaviour(BatteryManagementCapability())`
             },
             'protocols': {
-                title: "Protocols (Interaction Design)",
-                doc: "Uses Agent UML (AUML) to formalize interaction protocols. Communication follows the asynchronous FIPA-ACL standard.",
+                title: 'Protocols (Interaction Design)',
+                doc: 'Formalizes communication with asynchronous FIPA-ACL semantics. Protocol design prevents coupling and makes behavior verifiable under message delay or burst conditions.',
                 diag: `sequenceDiagram
     participant SA as SolarAgent
     participant HMA as HomeManagerAgent
     loop Every 3 seconds
         alt Wattage >= 300W
-            SA->>HMA: INFORM "OPTIMAL"
+            SA->>HMA: INFORM OPTIMAL
         else Wattage < 300W
-            SA->>HMA: INFORM "LOW"
+            SA->>HMA: INFORM LOW
         end
     end`,
-                code: "msg = Message(to='manager@localhost')\nmsg.set_metadata('performative', 'INFORM')\nmsg.body = 'OPTIMAL'"
+                code: `msg = Message(to='manager@localhost')
+msg.set_metadata('performative', 'INFORM')
+msg.body = solar_state
+await self.send(msg)`
+            },
+            'agent-descriptors': {
+                title: 'Agent Descriptors',
+                doc: 'Each agent descriptor captures role, responsibilities, perceptions, actions, and dependencies. This is your architecture contract before detailed plan design.',
+                                diag: `graph LR
+        SolarAgent[SolarAgent\n+senseSolarWattage()\n+publishPercept()] -->|INFORM| HomeManagerAgent[HomeManagerAgent\n+updateBeliefs()\n+selectIntention()\n+dispatchAction()]`,
+                code: `AGENT_DESCRIPTOR = {
+    'name': 'HomeManagerAgent',
+    'beliefs': ['soc', 'solar', 'sensor_status'],
+    'capabilities': ['monitor', 'plan', 'act']
+}`
+            },
+            'agent-overview': {
+                title: 'Agent Overview',
+                doc: 'Detailed design zooms inside HomeManagerAgent into capabilities and internal data. This is where architecture turns into executable behavior units.',
+                diag: `graph TD
+    A[HomeManagerAgent] --> B[Belief Update Capability]
+    A --> C[Goal Arbitration Capability]
+    A --> D[Action Execution Capability]
+    C --> E[Choose Charging Intention]`,
+                code: `class BatteryManagementCapability(FSMBehaviour):
+    async def setup(self):
+        self.add_state(name='IDLE', state=IdleState(), initial=True)
+        self.add_state(name='CHARGING', state=ChargingState())`
             },
             'fsm': {
-                title: "FSM & Dynamic Process",
-                doc: "To handle the dynamic environment, HomeManagerAgent uses a Finite State Machine. If communication drops or an overheat occurs, it safely drops its achievement goal.",
+                title: 'FSM and Dynamic Process',
+                doc: 'Represents runtime adaptation. Under uncertainty (sensor timeout, low solar, high temperature), the FSM provides explicit safe transitions and fallback behavior.',
                 diag: `stateDiagram-v2
     [*] --> IDLE
-    IDLE --> CHARGING : Solar=OPTIMAL & SoC < 90%
-    CHARGING --> IDLE : SoC >= 90% or Solar=LOW
+    IDLE --> CHARGING : Solar=OPTIMAL and SoC < 90
+    CHARGING --> IDLE : SoC >= 90 or Solar=LOW
     CHARGING --> SYSTEM_CHECK : Sensor Timeout
-    SYSTEM_CHECK --> IDLE : Sensor Reconnected`,
-                code: "class BatteryManagementCapability(FSMBehaviour):\n    async def setup(self):\n        self.add_state(name='IDLE', state=IdleState(), initial=True)\n        self.add_state(name='CHARGING', state=ChargingState())"
+    SYSTEM_CHECK --> IDLE : Sensor Reconnected
+    SYSTEM_CHECK --> FAILSAFE : Timeout > threshold`,
+                code: `class SystemCheckState(State):
+    async def run(self):
+        if self.agent.sensor_online:
+            self.set_next_state('IDLE')
+        else:
+            self.set_next_state('FAILSAFE')`
+            },
+            'plan-descriptors': {
+                title: 'Plan Descriptors',
+                doc: 'Plan descriptors connect trigger conditions to context-aware actions. They are the practical bridge between high-level BDI intentions and executable code paths.',
+                diag: `flowchart TD
+    T[Trigger: SoC < 25] --> C{Solar >= 300W?}
+    C -- Yes --> P1[Plan: Start Charge]
+    C -- No --> P2[Plan: Defer + Notify]
+    P1 --> O[Outcome: SoC Recovery]
+    P2 --> O2[Outcome: Safety Preserved]`,
+                code: `PLANS = [
+    {'trigger': 'soc_low and solar_optimal', 'action': 'start_charge'},
+    {'trigger': 'soc_low and solar_low', 'action': 'notify_user'}
+]`
             }
         };
 
+        let shemData = loadStoredData();
+
+        const nodeButtons = [...document.querySelectorAll('.node')];
+        const tabButtons = [...document.querySelectorAll('.tab')];
+
+        const modeLabel = document.getElementById('modeLabel');
+        const statusLine = document.getElementById('statusLine');
+        const progressText = document.getElementById('progressText');
+
+        const placeholder = document.getElementById('placeholder');
+        const contentArea = document.getElementById('contentArea');
+        const contentTitle = document.getElementById('contentTitle');
+
+        const docText = document.getElementById('docText');
+        const docEdit = document.getElementById('docEdit');
+
+        const codeText = document.getElementById('codeText');
+        const codeEdit = document.getElementById('codeEdit');
+
+        const mermaidRender = document.getElementById('mermaidRender');
+
+        const pwdOverlay = document.getElementById('pwdOverlay');
+        const pwdInput = document.getElementById('pwdInput');
+
+        document.getElementById('toggleEditBtn').addEventListener('click', requestEditMode);
+        document.getElementById('copyLinkBtn').addEventListener('click', copyCurrentTopic);
+        document.getElementById('copyCodeBtn').addEventListener('click', copyCurrentCode);
+        document.getElementById('saveTopicBtn').addEventListener('click', saveCurrentTopicEdits);
+        document.getElementById('resetTopicBtn').addEventListener('click', resetCurrentTopic);
+        document.getElementById('importModeBtn').addEventListener('click', toggleImportMode);
+        document.getElementById('autoExportBtn').addEventListener('click', toggleAutoExport);
+        document.getElementById('importAutoApplyBtn').addEventListener('click', toggleImportAutoApply);
+        document.getElementById('exportDataBtn').addEventListener('click', exportData);
+        document.getElementById('importDataBtn').addEventListener('click', promptImport);
+        document.getElementById('cancelPwdBtn').addEventListener('click', closePasswordBox);
+        document.getElementById('submitPwdBtn').addEventListener('click', checkPassword);
+        document.getElementById('importFileInput').addEventListener('change', importData);
+        document.getElementById('cancelImportBtn').addEventListener('click', cancelImportPreview);
+        document.getElementById('confirmImportBtn').addEventListener('click', confirmImportPreview);
+
+        nodeButtons.forEach(btn => {
+            btn.addEventListener('click', () => loadContent(btn.dataset.node));
+        });
+
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        });
+
+        document.addEventListener('keydown', handleKeyboard);
+
+        function loadStoredData() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) {
+                return structuredClone(defaultData);
+            }
+            try {
+                const parsed = JSON.parse(raw);
+                return { ...structuredClone(defaultData), ...parsed };
+            } catch {
+                return structuredClone(defaultData);
+            }
+        }
+
+        function persistData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(shemData));
+        }
+
+        function toggleImportMode() {
+            importMode = importMode === 'merge' ? 'replace' : 'merge';
+            document.getElementById('importModeBtn').textContent = `Import Mode: ${importMode.toUpperCase()}`;
+            setStatus(`Import mode set to ${importMode.toUpperCase()}.`);
+        }
+
+        function toggleAutoExport() {
+            autoExportEnabled = !autoExportEnabled;
+            document.getElementById('autoExportBtn').textContent = `Auto Export: ${autoExportEnabled ? 'ON' : 'OFF'}`;
+            setStatus(`Auto export ${autoExportEnabled ? 'enabled' : 'disabled'}.`);
+        }
+
+        function toggleImportAutoApply() {
+            importAutoApplyEnabled = !importAutoApplyEnabled;
+            document.getElementById('importAutoApplyBtn').textContent = `Auto-Apply: ${importAutoApplyEnabled ? 'ON' : 'OFF'}`;
+            setStatus(`Auto-apply imports ${importAutoApplyEnabled ? 'enabled' : 'disabled'}.`);
+        }
+
+        // Toast notifications
+        let _toastTimer = null;
+        function showToast(message, ms = 3000) {
+            const t = document.getElementById('toast');
+            if (!t) return;
+            t.textContent = message;
+            t.classList.add('show');
+            clearTimeout(_toastTimer);
+            _toastTimer = setTimeout(() => {
+                t.classList.remove('show');
+            }, ms);
+        }
+
         function requestEditMode() {
-            if(isEditMode) {
+            if (isEditMode) {
                 isEditMode = false;
-                document.getElementById('modeLabel').innerText = "Current Mode: VIEW";
+                modeLabel.textContent = 'Mode: VIEW';
                 toggleEditors();
+                setStatus('Switched to view mode.');
             } else {
-                document.getElementById('pwdOverlay').style.display = 'flex';
+                pwdOverlay.style.display = 'flex';
+                pwdOverlay.setAttribute('aria-hidden', 'false');
+                pwdInput.focus();
             }
         }
 
         function closePasswordBox() {
-            document.getElementById('pwdOverlay').style.display = 'none';
-            document.getElementById('pwdInput').value = '';
+            pwdOverlay.style.display = 'none';
+            pwdOverlay.setAttribute('aria-hidden', 'true');
+            pwdInput.value = '';
         }
 
         function checkPassword() {
-            const pwd = document.getElementById('pwdInput').value;
-            // Simulated password check
-            if(pwd === 'admin123') { 
+            if (pwdInput.value === EDIT_PASSWORD) {
                 isEditMode = true;
-                document.getElementById('modeLabel').innerText = "Current Mode: EDIT";
+                modeLabel.textContent = 'Mode: EDIT';
                 closePasswordBox();
                 toggleEditors();
+                setStatus('Edit mode unlocked.');
             } else {
-                alert('Incorrect Password');
+                setStatus('Incorrect password.');
+                alert('Incorrect password');
             }
         }
 
         function toggleEditors() {
-            const docText = document.getElementById('docText');
-            const docEdit = document.getElementById('docEdit');
-            const codeText = document.getElementById('codeText');
-            const codeEdit = document.getElementById('codeEdit');
+            const showEditor = isEditMode && currentNode !== null;
+            docText.hidden = showEditor;
+            codeText.hidden = showEditor;
+            docEdit.hidden = !showEditor;
+            codeEdit.hidden = !showEditor;
 
-            if(isEditMode) {
-                docText.style.display = 'none';
-                docEdit.style.display = 'block';
-                docEdit.value = docText.innerText;
-
-                codeText.style.display = 'none';
-                codeEdit.style.display = 'block';
-                codeEdit.value = codeText.innerText;
-            } else {
-                docText.style.display = 'block';
-                docEdit.style.display = 'none';
-                docText.innerText = docEdit.value;
-
-                codeText.style.display = 'block';
-                codeEdit.style.display = 'none';
-                codeText.innerText = codeEdit.value;
+            if (showEditor) {
+                docEdit.value = docText.textContent;
+                codeEdit.value = codeText.textContent;
             }
         }
 
-        function loadContent(nodeKey) {
-            document.getElementById('placeholder').style.display = 'none';
-            document.getElementById('contentArea').style.display = 'flex';
-            
-            const data = shemData[nodeKey] || { title: "WIP", doc: "Not documented yet.", diag: "graph TD\nA[WIP]", code: "# WIP" };
-            
-            document.getElementById('contentTitle').innerText = data.title;
-            
-            document.getElementById('docText').innerText = data.doc;
-            document.getElementById('docEdit').value = data.doc;
-            
-            document.getElementById('codeText').innerText = data.code;
-            document.getElementById('codeEdit').value = data.code;
+        async function loadContent(nodeKey) {
+            const data = shemData[nodeKey];
+            if (!data) {
+                return;
+            }
 
-            // Render Mermaid
-            const mermaidDiv = document.getElementById('mermaidRender');
-            mermaidDiv.removeAttribute('data-processed');
-            mermaidDiv.innerHTML = data.diag;
-            mermaid.run({
-                nodes: [mermaidDiv]
+            currentNode = nodeKey;
+
+            nodeButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.node === nodeKey);
             });
 
+            placeholder.style.display = 'none';
+            contentArea.style.display = 'flex';
+
+            contentTitle.textContent = data.title;
+            docText.textContent = data.doc;
+            codeText.textContent = data.code;
+
+            docEdit.value = data.doc;
+            codeEdit.value = data.code;
+
+            progressText.textContent = `Current topic: ${data.title}`;
+            toggleEditors();
+            await renderDiagram(data.diag);
             switchTab('doc');
+
+            const hash = `#${nodeKey}`;
+            if (location.hash !== hash) {
+                history.replaceState(null, '', hash);
+            }
+        }
+
+        async function renderDiagram(diagramCode) {
+            try {
+                mermaidRender.removeAttribute('data-processed');
+                mermaidRender.innerHTML = diagramCode;
+                await mermaid.run({ nodes: [mermaidRender] });
+            } catch {
+                mermaidRender.textContent = 'Diagram could not be rendered. Check Mermaid syntax in edit mode.';
+            }
         }
 
         function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-            
-            document.getElementById(tabId).classList.add('active');
-            
-            const tabs = document.querySelectorAll('.tab');
-            if(tabId === 'doc') tabs.classList.add('active');
-            if(tabId === 'diag') tabs[2].classList.add('active');
-            if(tabId === 'code') tabs[17].classList.add('active');
+            document.querySelectorAll('.panel').forEach(panel => {
+                panel.classList.toggle('active', panel.id === tabId);
+            });
+            tabButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tabId);
+            });
+        }
+
+        function saveCurrentTopicEdits() {
+            if (!currentNode) {
+                setStatus('Select a topic first.');
+                return;
+            }
+
+            if (!isEditMode) {
+                setStatus('Switch to edit mode to save changes.');
+                return;
+            }
+
+            shemData[currentNode].doc = docEdit.value;
+            shemData[currentNode].code = codeEdit.value;
+
+            docText.textContent = docEdit.value;
+            codeText.textContent = codeEdit.value;
+
+            persistData();
+
+            if (autoExportEnabled) {
+                exportData({
+                    silentStatus: true,
+                    reason: 'save'
+                });
+            }
+
+            setStatus('Topic edits saved to browser storage.');
+        }
+
+        function resetCurrentTopic() {
+            if (!currentNode) {
+                setStatus('Select a topic first.');
+                return;
+            }
+
+            shemData[currentNode] = structuredClone(defaultData[currentNode]);
+            persistData();
+            loadContent(currentNode);
+            setStatus('Topic reset to default content.');
+        }
+
+        async function copyCurrentCode() {
+            if (!currentNode) {
+                setStatus('Select a topic first.');
+                return;
+            }
+
+            const code = isEditMode ? codeEdit.value : codeText.textContent;
+            await navigator.clipboard.writeText(code);
+            setStatus('Code copied to clipboard.');
+        }
+
+        async function copyCurrentTopic() {
+            if (!currentNode) {
+                setStatus('Select a topic first.');
+                return;
+            }
+            const url = `${location.origin}${location.pathname}#${currentNode}`;
+            await navigator.clipboard.writeText(url);
+            setStatus('Topic link copied to clipboard.');
+        }
+
+        function timestampToken() {
+            const now = new Date();
+            const p2 = (n) => String(n).padStart(2, '0');
+            return `${now.getFullYear()}${p2(now.getMonth() + 1)}${p2(now.getDate())}-${p2(now.getHours())}${p2(now.getMinutes())}${p2(now.getSeconds())}`;
+        }
+
+        function exportData(options = {}) {
+            const { silentStatus = false, reason = 'manual' } = options;
+            const payload = {
+                exportedAt: new Date().toISOString(),
+                version: 1,
+                data: shemData
+            };
+
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `shem-prometheus-notes-${timestampToken()}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            if (!silentStatus) {
+                const why = reason === 'manual' ? '' : ` (${reason})`;
+                setStatus(`Notes exported as JSON${why}.`);
+            }
+        }
+
+        function promptImport() {
+            const fileInput = document.getElementById('importFileInput');
+            fileInput.value = '';
+            fileInput.click();
+        }
+
+        async function importData(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            try {
+                if (autoExportEnabled) {
+                    exportData({
+                        silentStatus: true,
+                        reason: 'pre-import-backup'
+                    });
+                }
+
+                const text = await file.text();
+                const parsed = JSON.parse(text);
+                const incoming = parsed && parsed.data ? parsed.data : parsed;
+
+                if (!incoming || typeof incoming !== 'object') {
+                    throw new Error('Invalid import format');
+                }
+
+                // compute compact preview stats
+                const stats = computeImportStats(incoming);
+                const previewMsg = `Preview: ${stats.adds} new, ${stats.changes} changed, ${stats.same} identical`;
+                setStatus(previewMsg);
+                showToast(previewMsg, 2500);
+
+                // Auto-apply when safe: merge mode + no changes and auto-apply enabled
+                if (importAutoApplyEnabled && importMode === 'merge' && stats.changes === 0) {
+                    // perform merge automatically
+                    const merged = structuredClone(shemData);
+                    Object.keys(defaultData).forEach(key => {
+                        if (incoming[key] && typeof incoming[key] === 'object') {
+                            merged[key] = {
+                                ...(merged[key] || defaultData[key]),
+                                ...incoming[key]
+                            };
+                        }
+                    });
+                    shemData = merged;
+                    persistData();
+                    if (currentNode) await loadContent(currentNode);
+                    const autoMsg = `Import auto-applied: ${stats.adds} new, ${stats.changes} changed.`;
+                    setStatus(autoMsg);
+                    showToast(autoMsg, 3000);
+                    return;
+                }
+
+                // otherwise show detailed preview modal
+                prepareImportPreview(incoming);
+            } catch {
+                setStatus('Import failed. Please select a valid JSON notes file.');
+            }
+        }
+
+        // Preview state
+        let _incomingPreview = null;
+
+        function computeImportStats(incoming) {
+            const keys = Object.keys(defaultData);
+            let adds = 0, changes = 0, same = 0;
+            keys.forEach(key => {
+                if (!incoming[key]) return;
+                const cur = shemData[key];
+                const inc = incoming[key];
+                if (!cur) {
+                    adds++;
+                    return;
+                }
+                const curDoc = (cur.doc || '').trim();
+                const incDoc = (inc.doc || '').trim();
+                const curCode = (cur.code || '').trim();
+                const incCode = (inc.code || '').trim();
+                if (curDoc === incDoc && curCode === incCode) {
+                    same++;
+                } else {
+                    changes++;
+                }
+            });
+            return { adds, changes, same };
+        }
+
+        function prepareImportPreview(incoming) {
+            _incomingPreview = incoming;
+            const list = document.getElementById('importPreviewList');
+            list.innerHTML = '';
+
+            const keys = Object.keys(defaultData);
+            let adds = 0, changes = 0, same = 0;
+
+            keys.forEach(key => {
+                if (!incoming[key]) return;
+                const cur = shemData[key];
+                const inc = incoming[key];
+                let status = 'new';
+                if (cur) {
+                    const curDoc = (cur.doc || '').trim();
+                    const incDoc = (inc.doc || '').trim();
+                    const curCode = (cur.code || '').trim();
+                    const incCode = (inc.code || '').trim();
+                    if (curDoc === incDoc && curCode === incCode) {
+                        status = 'identical';
+                        same++;
+                    } else {
+                        status = 'changed';
+                        changes++;
+                    }
+                } else {
+                    adds++;
+                }
+
+                const row = document.createElement('div');
+                row.style.padding = '8px 6px';
+                row.style.borderBottom = '1px solid ' + getComputedStyle(document.documentElement).getPropertyValue('--line');
+                row.innerHTML = `<strong>${defaultData[key].title}</strong> <div style="float:right;color:${status==='changed'?'#c75':'#4a8'}">${status.toUpperCase()}</div><div style="clear:both;opacity:0.9;margin-top:6px;font-size:0.9rem">${(inc.doc||'').slice(0,160)}${(inc.doc||'').length>160? '...':''}</div>`;
+                list.appendChild(row);
+            });
+
+            const summary = document.getElementById('importPreviewSummary');
+            summary.textContent = `Preview: ${adds} new, ${changes} changed, ${same} identical topics — Import Mode: ${importMode.toUpperCase()}`;
+
+            // show modal
+            const overlay = document.getElementById('importPreviewOverlay');
+            overlay.style.display = 'flex';
+            overlay.setAttribute('aria-hidden', 'false');
+        }
+
+        async function confirmImportPreview() {
+            if (!_incomingPreview) {
+                setStatus('Nothing to import.');
+                return;
+            }
+
+            const incoming = _incomingPreview;
+            const merged = structuredClone(importMode === 'replace' ? defaultData : shemData);
+
+            Object.keys(defaultData).forEach(key => {
+                if (incoming[key] && typeof incoming[key] === 'object') {
+                    merged[key] = {
+                        ...(merged[key] || defaultData[key]),
+                        ...incoming[key]
+                    };
+                }
+            });
+
+            if (importMode === 'replace') {
+                Object.keys(defaultData).forEach(key => {
+                    if (!merged[key]) {
+                        merged[key] = structuredClone(defaultData[key]);
+                    }
+                });
+            }
+
+            shemData = merged;
+            persistData();
+            if (currentNode) await loadContent(currentNode);
+            setStatus(`Notes imported successfully (${importMode.toUpperCase()}).`);
+
+            // hide preview
+            const overlay = document.getElementById('importPreviewOverlay');
+            overlay.style.display = 'none';
+            overlay.setAttribute('aria-hidden', 'true');
+            _incomingPreview = null;
+        }
+
+        function cancelImportPreview() {
+            _incomingPreview = null;
+            const overlay = document.getElementById('importPreviewOverlay');
+            overlay.style.display = 'none';
+            overlay.setAttribute('aria-hidden', 'true');
+            setStatus('Import cancelled.');
+        }
+
+        function setStatus(message) {
+            statusLine.textContent = message;
+        }
+
+        function handleKeyboard(event) {
+            if (event.key === 'Escape' && pwdOverlay.style.display === 'flex') {
+                closePasswordBox();
+                return;
+            }
+
+            if (event.key >= '1' && event.key <= '9') {
+                const idx = Number(event.key) - 1;
+                const btn = nodeButtons[idx];
+                if (btn) {
+                    btn.click();
+                }
+            }
+        }
+
+        if (location.hash) {
+            const node = location.hash.replace('#', '');
+            if (shemData[node]) {
+                loadContent(node);
+            }
         }
     </script>
 </body>
