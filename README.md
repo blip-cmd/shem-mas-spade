@@ -1,17 +1,41 @@
 # SHEM MAS
 
-Smart Home Energy Manager (SHEM) for DCIT 403. This repository presents a SPADE-based multi-agent system in which a solar sensing agent and a home energy manager coordinate battery usage under both nominal and stress conditions.
+![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
+![SPADE](https://img.shields.io/badge/framework-SPADE-orange.svg)
+![XMPP](https://img.shields.io/badge/protocol-XMPP-yellow.svg)
+![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
+
+Smart Home Energy Manager (SHEM). This repository presents a SPADE-based multi-agent system in which a solar sensing agent and a home energy manager coordinate battery usage under both nominal and stress conditions.
+
+## Topics
+`multi-agent-systems` • `fipa-acl` • `finite-state-machine` • `agent-oriented-programming` • `asynchronous-agents` • `smart-home` • `energy-optimization`
+
+## Methodology: Agent-Oriented Programming (AOP)
+
+This project leverages **Agent-Oriented Programming (AOP)**, a paradigm pioneered by **Yoav Shoham**, which structures software as interacting, autonomous entities (agents) rather than passive objects. Unlike Object-Oriented Programming where objects are invoked by others, AOP models systems as active agents that maintain internal beliefs, perceive environments, and communicate via formal semantics (like FIPA-ACL). 
+
+The system architecture and interaction protocols were rigorously designed using the **Prometheus Methodology**, authored by **Lin Padgham** and **Michael Winikoff**. This theoretical design was then brought to life using the **SPADE (Smart Python Agent Development Environment)** framework, created by **Javi Palanca, Vicente Julian, Gustavo Terrasa, and Carlos Carrascosa**. SPADE allows us to implement asynchronous, XMPP-based multi-agent systems efficiently in Python.
 
 ## Project Summary
 
-The project models a smart home as a distributed intelligent system with explicit perception, communication, and control layers:
+After a month of deeply studying the **Official Prometheus Methodology**, I designed and implemented SHEM from the ground up. My goal was to move beyond theory—reinforcing my grasp of Agent-Oriented Software Engineering (AOSE) while sharpening my system-level design and architectural decision-making. 
 
-- SolarAgent performs periodic sensing and publishes symbolic solar-state updates.
-- HomeManagerAgent maintains internal beliefs and applies finite-state control for battery management.
-- WeatherEnvironment provides both stochastic baseline behavior and a bounded Day 6 stress profile.
-- The evaluation pipeline records runtime metrics to evaluation_results.csv and reports final summary statistics.
+This project models a smart home as a distributed, intelligent system built on explicit perception, communication, and control layers:
 
-## Project Structure
+- **SolarAgent**: Operates as a simple reflex agent, performing periodic sensing and publishing symbolic solar-state updates.
+- **HomeManagerAgent**: Acts as the BDI-style "brain," maintaining internal beliefs and applying robust finite-state control for proactive battery management.
+- **WeatherEnvironment**: Provides a mathematically challenging simulation, featuring both stochastic baseline behavior and a bounded Day 6 stress profile.
+- **Evaluation Pipeline**: Autonomously records runtime metrics and logs performance indicators to validate the system's rationality and robustness.
+
+## Project Ecosystem & Structure
+
+- **[main.py](./main.py)**: The primary entry point for running the open-ended simulation.
+- **[stress_test.py](./stress_test.py)**: Runs bounded evaluation scenarios under variable weather conditions.
+- **[plots.py](./plots.py)**: Generates performance dashboards and metric visualizations.
+- **[agents/](./agents)**: Contains the autonomous `SolarAgent` and `HomeManagerAgent`.
+- **[core/](./core)**: Houses the stochastic `WeatherEnvironment` and evaluation `logger`.
+- **[docs/DesignReport.md](./docs/DesignReport.md)**: Detailed technical whitepaper covering the BDI architecture, Prometheus methodology, and AUML interaction design.
+- **[docs/PresentationFile.pdf](./docs/PresentationFile.pdf)**: High-level slide deck summarizing the system's goals and implementation.
 
 ```text
 shem-mas-spade/
@@ -30,18 +54,42 @@ shem-mas-spade/
 └── README.md
 ```
 
+## System Architecture
+
+```mermaid
+graph TD
+    WE[Weather Environment] -->|Senses Wattage| SA(SolarAgent: Simple Reflex)
+    SA -->|FIPA-ACL INFORM| HM(HomeManagerAgent: FSM)
+    HM -->|Maintains State| HM
+    HM -->|Log Transition| EL[Evaluation Logger]
+    SA -->|Log Perception| EL
+```
+
+## Quick Start
+
+```bash
+# 1. Start XMPP Server and install dependencies
+bash setup-xmpp.sh
+
+# 2. Activate virtual environment
+source .venv-wsl/bin/activate
+
+# 3. Run the stress test scenario
+python stress_test.py
+```
+
 ## Theory Applied
 
-This implementation maps directly to the DCIT 403 laboratory sequence.
+This implementation demonstrates core principles of Multi-Agent Systems in practice.
 
-| Course Lab | Theory Applied in This Repo | Concrete Implementation |
+| Concept | Theory Applied in This Repo | Concrete Implementation |
 | --- | --- | --- |
-| Lab 2: Perception and Environment Modeling | Agents reason over an external environment instead of fixed inputs. | WeatherEnvironment models solar conditions and exposes percepts as wattage, weather, and phase. |
-| Lab 3: Reactive Agent Behavior | Condition-action rules drive immediate response to percepts. | SolarAgent classifies each reading as LOW or OPTIMAL and acts without long-horizon planning. |
-| Lab 3: Reactive Control with FSM | Reactive behavior can also be structured as explicit states. | HomeManagerAgent uses an FSM with IDLE, CHARGING, SYSTEM_CHECK, and EMERGENCY states. |
-| Lab 4: Agent Communication | Agents exchange structured symbolic messages rather than shared variables. | SolarAgent sends FIPA-ACL INFORM messages and HomeManagerAgent filters them with a SPADE Template. |
-| Lab 12: System Evaluation | Multi-agent systems should be evaluated under stress with measurable metrics. | Day/Night stress logic, CSV logging, grid-energy estimate, safety violation counting, and reaction-time measurement. |
-| Lab 13: Packaging and Documentation | A finished MAS should be runnable, documented, and ready for demonstration. | Final README, dependency list, stress-test entry point, and optional plotting script. |
+| Perception & Environment Modeling | Agents reason over an external environment instead of fixed inputs. | WeatherEnvironment models solar conditions and exposes percepts as wattage, weather, and phase. |
+| Reactive Agent Behavior | Condition-action rules drive immediate response to percepts. | SolarAgent classifies each reading as LOW or OPTIMAL and acts without long-horizon planning. |
+| Reactive Control with FSM | Reactive behavior can also be structured as explicit states. | HomeManagerAgent uses an FSM with IDLE, CHARGING, SYSTEM_CHECK, and EMERGENCY states. |
+| Agent Communication | Agents exchange structured symbolic messages rather than shared variables. | SolarAgent sends FIPA-ACL INFORM messages and HomeManagerAgent filters them with a SPADE Template. |
+| System Evaluation | Multi-agent systems should be evaluated under stress with measurable metrics. | Day/Night stress logic, CSV logging, grid-energy estimate, safety violation counting, and reaction-time measurement. |
+| Packaging & Documentation | A finished MAS should be runnable, documented, and ready for deployment. | Final README, dependency list, stress-test entry point, and optional plotting script. |
 
 ## Core Features
 
@@ -120,8 +168,8 @@ Only transitions with a measured value are included. The final summary reports:
 ### 1. Create and activate a virtual environment
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv .venv-wsl
+source .venv-wsl/bin/activate
 ```
 
 ### 2. Install Python dependencies
@@ -277,7 +325,7 @@ Successful execution would produce:
 
 ## Notes
 
-- JIDs and passwords are currently hardcoded for local coursework testing.
+- JIDs and passwords are currently hardcoded for local evaluation.
 - The project assumes localhost XMPP connectivity unless credentials in main.py are changed.
 - The plotting script is intentionally lightweight and only depends on the evaluation_results.csv
 
@@ -336,3 +384,10 @@ pip install -r requirements.txt
 # Run the app
 python main.py
 ```
+
+---
+
+<div align="center">
+  <b>Ryan Nii Akwei Brown</b><br>
+  <i>Designing systems like intelligent agents, an approach different from object oriented.</i>
+</div>

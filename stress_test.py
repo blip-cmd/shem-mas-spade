@@ -2,6 +2,7 @@
 
 import asyncio
 import argparse
+import spade
 from core.environment import WeatherEnvironment
 from core.logger import EvaluationLogger
 from agents.solar_agent import SolarAgent
@@ -179,7 +180,7 @@ def parse_args() -> argparse.Namespace:
 if __name__ == "__main__":
 	args = parse_args()
 	try:
-		asyncio.run(
+		spade.run(
 			run_stress_test(
 				total_steps=args.steps,
 				cloudy_probability=args.cloudy_probability,
