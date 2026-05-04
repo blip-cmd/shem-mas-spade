@@ -211,3 +211,6 @@ docs/presentation.md
 docs/implementation phase.md
 
 .venv-wsl
+.vscode/settings.json
+evaluation_results.csv
+

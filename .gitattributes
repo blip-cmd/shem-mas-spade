@@ -1,0 +1,6 @@
+# Prioritize Python logic in language statistics
+*.png linguist-vendored
+*.csv linguist-vendored
+*.db linguist-vendored
+docs/* linguist-vendored
+LICENSE linguist-vendored
