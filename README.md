@@ -18,7 +18,7 @@ The system architecture and interaction protocols were rigorously designed using
 
 ## Project Summary
 
-After a month of deeply studying the **Official Prometheus Methodology**, I designed and implemented SHEM from the ground up. My goal was to move beyond theory—reinforcing my grasp of Agent-Oriented Software Engineering (AOSE) while sharpening my system-level design and architectural decision-making. 
+After a month of deeply studying the **Official Prometheus Methodology**, I designed and implemented SHEM from the ground up. My goal was to move beyond theory, reinforcing my grasp of Agent-Oriented Software Engineering (AOSE) while sharpening my system-level design and architectural decision-making. 
 
 This project models a smart home as a distributed, intelligent system built on explicit perception, communication, and control layers:
 
@@ -68,13 +68,17 @@ graph TD
 ## Quick Start
 
 ```bash
-# 1. Start XMPP Server and install dependencies
-bash setup-xmpp.sh
+# 1. Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
 
-# 2. Activate virtual environment
-source .venv-wsl/bin/activate
+# 2. Install dependencies
+pip install -r requirements.txt
 
-# 3. Run the stress test scenario
+# 3. Start the built-in SPADE XMPP server (keep this running)
+spade run
+
+# 4. In a new terminal, run the stress test scenario
 python stress_test.py
 ```
 
@@ -178,48 +182,22 @@ source .venv-wsl/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Set up an XMPP server
+### 3. Start the XMPP Server
 
-SPADE requires an XMPP server. The setup script tries **ejabberd first** (more reliable), then falls back to **Prosody with TLS disabled** if needed.
+SPADE 4+ includes a built-in XMPP server natively in Python, eliminating the need to install OS-level servers like Prosody or ejabberd for development.
 
-**Automated setup (recommended):**
+**Standard Setup (Recommended):**
+Open a new terminal window, activate your virtual environment, and start the local server:
+```bash
+spade run
+```
+*Note: Keep this terminal open while running your agents. The built-in server automatically handles agent registration and message routing on port 5222.*
 
+**Legacy OS-Level Setup (Optional):**
+If you prefer running a production-grade external XMPP server (ejabberd or Prosody), you can use the included bash script:
 ```bash
 bash setup-xmpp.sh
 ```
-
-This script handles:
-- Attempting ejabberd (if available)
-- Falling back to Prosody with TLS disabled (if ejabberd unavailable or fails to start)
-- Registering both agent accounts automatically
-- Setting up Python virtual environment and dependencies
-
-**Manual setup (if script doesn't work):**
-
-If `bash setup-xmpp.sh` fails, try one of these:
-
-**Option A: ejabberd (lighter weight, fewer TLS issues)**
-```bash
-sudo apt-get install ejabberd
-sudo service ejabberd start
-sudo ejabberdctl register solar_sensor localhost sensor123
-sudo ejabberdctl register home_manager localhost manager123
-```
-
-**Option B: Prosody (more common, pre-configured here)**
-```bash
-sudo apt-get install prosody
-# Disable TLS to avoid certificate negotiation issues
-sudo sed -i 's/"tls";/--"tls";/g' /etc/prosody/prosody.cfg.lua
-sudo service prosody restart
-sudo prosodyctl adduser solar_sensor@localhost
-sudo prosodyctl adduser home_manager@localhost
-```
-
-**Troubleshooting:**
-- If XMPP server fails to start, check: `sudo systemctl status ejabberd.service` or `sudo systemctl status prosody.service`
-- If agents still can't connect, verify the server is listening: `nc -zv 127.0.0.1 5222`
-- Both ejabberd and Prosody support insecure (non-TLS) connections on port 5222 by default on localhost
 
 If your XMPP server is not `localhost`, set environment variables before running the app:
 
@@ -241,8 +219,8 @@ python main.py
 
 The stress test runs a scripted multi-phase scenario to systematically evaluate system behavior under varying weather and battery conditions. Each phase presents different environmental conditions:
 
-- **HIGH_SUNLIGHT**: Clear skies with maximum solar generation (900–1200 W).
-- **CLOUD_STRESS**: Variable cloud cover (configurable probability) with reduced wattage (80–950 W).
+- **HIGH_SUNLIGHT**: Clear skies with maximum solar generation (900-1200 W).
+- **CLOUD_STRESS**: Variable cloud cover (configurable probability) with reduced wattage (80-950 W).
 - **ZERO_SUNLIGHT**: Night phase with no solar generation (0 W).
 
 Basic run:

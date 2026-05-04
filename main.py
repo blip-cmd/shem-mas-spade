@@ -124,7 +124,7 @@ async def main():
 
 	try:
 		# ═══════════════════════════════════════════════════════════
-		# Step 3: Run indefinitely — let agents drive the loop
+		# Step 3: Run indefinitely, let agents drive the loop
 		# ═══════════════════════════════════════════════════════════
 		while solar_agent.is_alive() and manager_agent.is_alive():
 			await asyncio.sleep(1)

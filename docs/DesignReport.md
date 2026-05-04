@@ -48,10 +48,10 @@ Think of SHEM as a software-only system, deployed in a home with open sky, with 
 
 To effectively manage this environment, SHEM employs two distinct agent architectures:
 
-- **SolarAgent – A Simple Reflex Agent:**  
+- **SolarAgent - A Simple Reflex Agent:**  
   This agent operates purely on a sense-act cycle. It reads the current wattage from the environment and instantly categorises the weather state (e.g., `OPTIMAL` or `LOW`). It has no history.
 
-- **HomeManagerAgent – A Model-Based / Goal-Driven Agent:**  
+- **HomeManagerAgent - A Model-Based / Goal-Driven Agent:**  
   This is my BDI-style (Belief-Desire-Intention) "Brain". It maintains an internal Belief about the battery's State of Charge (SoC). It pursues long-term Goals by transitioning through Plans based on environmental events.
 
 ## 4. System Classification

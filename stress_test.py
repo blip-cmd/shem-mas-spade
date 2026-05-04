@@ -25,9 +25,9 @@ async def run_stress_test(
 	Run the bounded Day/Night stress scenario and print evaluation metrics.
 
 	Stress profile:
-	  T=0-(high_sunlight_duration-1)            HIGH_SUNLIGHT   — clear sky, 900-1200 W
-	  T=high_sunlight_duration-(+cloud_stress)  CLOUD_STRESS    — configurable cloud probability
-	  remaining timesteps                       ZERO_SUNLIGHT   — night, 0 W
+	  T=0-(high_sunlight_duration-1)            HIGH_SUNLIGHT   - clear sky, 900-1200 W
+	  T=high_sunlight_duration-(+cloud_stress)  CLOUD_STRESS    - configurable cloud probability
+	  remaining timesteps                       ZERO_SUNLIGHT   - night, 0 W
 	"""
 	if total_steps <= 0:
 		raise ValueError("total_steps must be a positive integer")
