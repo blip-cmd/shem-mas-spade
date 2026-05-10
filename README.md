@@ -27,18 +27,18 @@ This project models a smart home as a distributed, intelligent system built on e
 - **WeatherEnvironment**: Provides a mathematically challenging simulation, featuring both stochastic baseline behavior and a bounded Day 6 stress profile.
 - **Evaluation Pipeline**: Autonomously records runtime metrics and logs performance indicators to validate the system's rationality and robustness.
 
-## Interactive Design Explorer
+## Documentation & Live Tools
 
-As a specialized side product of this project, I developed the **Prometheus Design Learning Explorer**—an interactive web application designed to bridge the gap between high-level agent methodology and concrete implementation. 
+To provide a comprehensive view of the system's architecture and runtime behavior, I have deployed a dedicated **Documentation Portal** and an **Interactive Design Explorer**.
 
-The explorer allows users to traverse the three core phases of the Prometheus Methodology (System Specification, Architectural Design, and Detailed Design) through an intuitive, card-based interface. Each stage is paired with live Mermaid diagrams and SPADE-oriented code snippets, providing a holistic view of the "Energy Self-Sufficiency" goal-to-code pipeline.
+- **[Live Documentation Portal](https://blip-cmd.github.io/shem-mas-spade/)**: The central hub for all technical assets, including PDF presentations, design reports, and interactive tools.
+- **[Prometheus Design Explorer](https://blip-cmd.github.io/shem-mas-spade/rpdi.html)**: A specialized learning tool that traverses the three core phases of the Prometheus Methodology (System Specification, Architectural Design, and Detailed Design) through an intuitive, card-based interface.
 
 <div align="center">
   <img src="./docs/rpdi-gif.gif" alt="Prometheus Design Explorer Demonstration" width="800">
 </div>
 
-### Public Access & Publication
-- **Live Tool**: [Prometheus Design Learning Explorer](https://blip-cmd.github.io/shem-mas-spade/rpdi.html)
+### Publication
 - **Deep Dive**: [Read the full technical analysis on LinkedIn](https://www.linkedin.com/pulse/building-intelligent-energy-managers-agent-oriented-ryan-brown) <!-- Placeholder: Replace with actual URL if different -->
 
 ## Project Ecosystem & Structure
@@ -50,6 +50,7 @@ The explorer allows users to traverse the three core phases of the Prometheus Me
 - **[core/](./core)**: Houses the stochastic `WeatherEnvironment` and evaluation `logger`.
 - **[docs/DesignReport.md](./docs/DesignReport.md)**: Detailed technical whitepaper covering the BDI architecture, Prometheus methodology, and AUML interaction design.
 - **[docs/PresentationFile.pdf](./docs/PresentationFile.pdf)**: High-level slide deck summarizing the system's goals and implementation.
+- **[docs/index.html](./docs/index.html)**: The Documentation Portal (central landing page).
 - **[docs/rpdi.html](./docs/rpdi.html)**: The Prometheus Design Learning Explorer (interactive side-product).
 
 ```text

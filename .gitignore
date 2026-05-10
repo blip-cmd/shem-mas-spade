@@ -214,3 +214,6 @@ docs/implementation phase.md
 .vscode/settings.json
 evaluation_results.csv
 
+
+.vscode
+.kilocode

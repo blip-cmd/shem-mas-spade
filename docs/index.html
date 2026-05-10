@@ -1,23 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>repo docs</title>
-</head>
+    <meta property="og:title" content="SHEM Documentation Portal">
+    <meta property="og:description" content="Technical documentation, design explorers, and architectural reports for the Smart Home Energy Manager (SHEM) Multi-Agent System.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://blip-cmd.github.io/shem-mas-spade/">
+    <meta property="og:image" content="https://blip-cmd.github.io/shem-mas-spade/rpdi-preview.png">
+    <title>SHEM | Documentation Portal</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
+        :root {
+            --ink: #1e2a38;
+            --ink-soft: #5f6c7a;
+            --line: #d8e0e9;
+            --paper: #f7f8fb;
+            --panel: #ffffff;
+            --brand: #0f6ab5;
+            --brand-2: #14a085;
+            --accent: #ffd166;
+            --shadow: 0 10px 30px rgba(14, 42, 72, 0.08);
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: 
+                radial-gradient(circle at 10% -10%, #d8ebff 0%, transparent 45%),
+                radial-gradient(circle at 90% 100%, #e7fff6 0%, transparent 40%),
+                #f4f7fb;
+            color: var(--ink);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            flex: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .logo-box {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--brand), var(--brand-2));
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(15, 106, 181, 0.3);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: linear-gradient(90deg, var(--ink), var(--brand));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--ink-soft);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: var(--radius);
+            padding: 32px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow);
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            background: #ffffff;
+            border-color: var(--brand);
+            box-shadow: 0 20px 40px rgba(14, 42, 72, 0.12);
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            margin-bottom: 16px;
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 12px;
+            color: var(--ink);
+        }
+
+        .card p {
+            color: var(--ink-soft);
+            font-size: 0.95rem;
+            margin-bottom: 24px;
+            flex: 1;
+        }
+
+        .card-link {
+            display: inline-flex;
+            align-items: center;
+            font-weight: 700;
+            color: var(--brand);
+            gap: 8px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-link::after {
+            content: '→';
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover .card-link::after {
+            transform: translateX(4px);
+        }
+
+        .highlight-card {
+            border: 2px solid var(--accent);
+            background: linear-gradient(135deg, #ffffff, #fffdf8);
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px;
+            border-top: 1px solid var(--line);
+            margin-top: 60px;
+            color: var(--ink-soft);
+            font-size: 0.9rem;
+        }
+
+        footer b {
+            color: var(--ink);
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 2rem; }
+            .grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
 <body>
-    <!--big landing button: Prometheus Design Learning Explorer-->
-    <div class="hero">
-        <a href="rpdi.html" class="hero-button">Prometheus Design Learning Explorer</a>
+
+    <div class="container">
+        <header>
+            <div class="logo-box">SHEM</div>
+            <h1>Documentation Portal</h1>
+            <p class="subtitle">Technical ecosystem for the Smart Home Energy Manager, a multi-agent system designed using the Prometheus Methodology and SPADE framework.</p>
+        </header>
+
+        <main class="grid">
+            <!-- Learning Explorer -->
+            <a href="rpdi.html" class="card highlight-card">
+                <div class="card-icon">🏗️</div>
+                <h2>Design Learning Explorer</h2>
+                <p>Interactive tool traversing System Specification, Architectural Design, and Detailed Design with live Mermaid diagrams and code.</p>
+                <span class="card-link">Launch Explorer</span>
+            </a>
+
+            <!-- Design Report -->
+            <a href="DesignReport.md" class="card">
+                <div class="card-icon">📄</div>
+                <h2>Technical Whitepaper</h2>
+                <p>Comprehensive report covering the BDI architecture, agent interaction protocols (AUML), and environmental modeling logic.</p>
+                <span class="card-link">View Report</span>
+            </a>
+
+            <!-- Presentation -->
+            <a href="PresentationFile.pdf" class="card">
+                <div class="card-icon">📊</div>
+                <h2>Project Slide Deck</h2>
+                <p>High-level overview of system goals, methodology choice, and performance results for stakeholder review.</p>
+                <span class="card-link">Open PDF</span>
+            </a>
+
+            <!-- Repository -->
+            <a href="https://github.com/blip-cmd/shem-mas-spade" class="card">
+                <div class="card-icon">💻</div>
+                <h2>GitHub Repository</h2>
+                <p>Access the full source code, stress testing suites, and performance evaluation pipelines for the SHEM system.</p>
+                <span class="card-link">Visit GitHub</span>
+            </a>
+        </main>
     </div>
-    <h1>repo docs</h1>
-    <p>here we keep all the docs for the repo</p>
-    <ul>
-        <li></li>
-    </ul>
+
+    <footer>
+        <p><b>Ryan Nii Akwei Brown</b><br>
+        <i>Intelligent Agent-Oriented Systems & Architectural Design</i></p>
+    </footer>
 
 </body>
-
 </html>
