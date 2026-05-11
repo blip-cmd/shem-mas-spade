@@ -39,7 +39,7 @@ To provide a comprehensive view of the system's architecture and runtime behavio
 </div>
 
 ### Publication
-- **Deep Dive**: [Read the full technical analysis on LinkedIn](https://www.linkedin.com/pulse/building-intelligent-energy-managers-agent-oriented-ryan-brown) <!-- Placeholder: Replace with actual URL if different -->
+- **The Experience**: [Read the article on LinkedIn](https://www.linkedin.com/pulse/how-agent-oriented-design-redefined-my-approach-ai-brown-snqzc/) <!-- Placeholder: Replace with actual URL if different -->
 
 ## Project Ecosystem & Structure
 
