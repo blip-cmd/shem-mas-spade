@@ -5,7 +5,13 @@
 ![XMPP](https://img.shields.io/badge/protocol-XMPP-yellow.svg)
 ![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
 
-Smart Home Energy Manager (SHEM). This repository presents a SPADE-based multi-agent system in which a solar sensing agent and a home energy manager coordinate battery usage under both nominal and stress conditions.
+Smart Home Energy Manager (SHEM) is a simulation of a smart home in Python. Two agents talk over XMPP: one senses solar output, the other manages the battery. It was designed with the Prometheus methodology, built on SPADE, and run through a scripted stress profile.
+
+**Tech stack:** Python, SPADE (XMPP agents), NumPy, Matplotlib.
+
+**Try it:** [documentation portal](https://blip-cmd.github.io/shem-mas-spade/) or jump to [Quick Start](#quick-start).
+
+**What I would improve next:** add unit tests and CI, run the stress test several times instead of reporting one recorded run, and compress the large files in `docs/`.
 
 ## Topics
 `multi-agent-systems` • `fipa-acl` • `finite-state-machine` • `agent-oriented-programming` • `asynchronous-agents` • `smart-home` • `energy-optimization`
@@ -39,7 +45,7 @@ To provide a comprehensive view of the system's architecture and runtime behavio
 </div>
 
 ### Publication
-- **The Experience**: [Read the article on LinkedIn](https://www.linkedin.com/pulse/how-agent-oriented-design-redefined-my-approach-ai-brown-snqzc/) <!-- Placeholder: Replace with actual URL if different -->
+- **The Experience**: [Read the article on LinkedIn](https://www.linkedin.com/pulse/how-agent-oriented-design-redefined-my-approach-ai-brown-snqzc/)
 
 ## Project Ecosystem & Structure
 
@@ -297,7 +303,7 @@ This generates battery_level_over_time.png in the project root.
 
 ## Key Findings
 
-The following findings are derived from the an evaluation_results.csv run earlier on:
+The following findings are derived from an evaluation_results.csv run earlier on:
 
 - Total Grid Energy Saved: **103.88 units**
 - Battery Safety Violations: **0 times**
